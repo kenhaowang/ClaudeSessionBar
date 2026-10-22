@@ -131,6 +131,10 @@ cp -R ~/.claude/session-dashboard /tmp/csb-copy && rm -f /tmp/csb-copy/groups.js
 CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 ```
 
+## 版本紀錄
+
+見 [CHANGELOG.md](CHANGELOG.md)。
+
 ## 授權
 
 [MIT](LICENSE)
