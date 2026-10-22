@@ -131,9 +131,24 @@ cp -R ~/.claude/session-dashboard /tmp/csb-copy && rm -f /tmp/csb-copy/groups.js
 CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 ```
 
-## Changelog
+## Version
 
-See [CHANGELOG.md](CHANGELOG.md).
+Current version: **v1.0.0** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.0.0 (2026-10-22)
+
+First public release.
+
+- The menu bar icon follows how many sessions are waiting on you: 🌳 0–1, 🍌 2–5, 🍊 7–10, 🔥 11+, 🎂 exactly 6 or 19
+- Lists every open Claude Code session with its state (needs approval, needs reply, running, background, idle, done, …); click one to jump to its iTerm2 tab
+- After each turn, Haiku works out what the session is waiting on and suggests a name
+- Custom session names and manual states (back to automatic after your next message)
+- Groups: create, rename, delete, reorder by dragging, drag sessions into a group
+- ＋ opens a new iTerm2 tab running `claude`; the folder is set from its right-click menu
+- After a restart or an iTerm2 crash, lists the sessions that didn't come back and reopens them with `claude --resume`
+- Shows the PR status, reviews and CI for each session's PR (needs `gh`)
+- Opens a session's branch in Cursor, creating a git worktree when needed
+- Chinese / English UI, launch at login
 
 ## License
 
