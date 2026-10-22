@@ -13,14 +13,45 @@
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI（`claude`）並已登入
 - 選用：[GitHub CLI](https://cli.github.com/)（`gh`）用來顯示 PR／CI 狀態；[Cursor](https://cursor.com/) 用來開啟分支
 
-## 安裝 / 更新
+## 安裝
+
+1. 確認已安裝 Xcode Command Line Tools（`swift --version` 有輸出就是有；沒有的話執行下面第一行）：
+
+   ```bash
+   xcode-select --install
+   ```
+
+2. 下載原始碼並編譯安裝：
+
+   ```bash
+   git clone https://github.com/kenhaowang/ClaudeSessionBar.git
+   cd ClaudeSessionBar
+   ./build.sh install                   # 編譯、裝到 ~/Applications/ClaudeSessionBar.app 並啟動
+   ```
+
+   App 是在你自己的電腦上編譯並簽署，不會被 Gatekeeper 擋下。
+
+3. 安裝 Claude Code hooks（讓 App 知道哪個 session 在等你核准權限、哪個剛跑完）：
+
+   ```bash
+   /usr/bin/python3 install_hooks.py    # 寫進 ~/.claude/settings.json，有舊檔會先備份
+   ```
+
+   Claude Code 在 session 啟動時才讀 hooks，已經開著的 session 要重開才會套用。
+
+4. 選單列出現圖示後點開：
+   - 第一次點擊 session 時，macOS 會詢問是否允許控制 iTerm2，要按「允許」
+   - 底部可以勾選「登入時啟動」
+   - 在「＋」上按右鍵選「選擇資料夾…」，設定開新 session 的資料夾
+
+## 更新
 
 ```bash
-./build.sh install                       # 編譯、裝到 ~/Applications 並啟動
-/usr/bin/python3 install_hooks.py        # 把 hooks 寫進 ~/.claude/settings.json（會先備份）
+cd ClaudeSessionBar
+git pull
+./build.sh install                       # 會先關掉舊的再啟動新的
+/usr/bin/python3 install_hooks.py        # hooks 有更新時才需要；重跑不會重複寫入
 ```
-
-第一次點擊 session 時，macOS 會詢問是否允許控制 iTerm2，要按「允許」。
 
 ## 移除
 

@@ -24,10 +24,15 @@ def is_ours(group: dict) -> bool:
 
 def main() -> None:
     uninstall = "--uninstall" in sys.argv
-    with open(SETTINGS) as f:
-        settings = json.load(f)
-    backup = "{}.bak-csb-{}".format(SETTINGS, time.strftime("%Y%m%d%H%M%S"))
-    shutil.copy2(SETTINGS, backup)
+    settings = {}
+    backup = None
+    if os.path.exists(SETTINGS):
+        with open(SETTINGS) as f:
+            settings = json.load(f)
+        backup = "{}.bak-csb-{}".format(SETTINGS, time.strftime("%Y%m%d%H%M%S"))
+        shutil.copy2(SETTINGS, backup)
+    else:
+        os.makedirs(os.path.dirname(SETTINGS), exist_ok=True)
 
     if not uninstall:
         os.makedirs(os.path.dirname(HOOK_DST), exist_ok=True)
@@ -50,7 +55,8 @@ def main() -> None:
         json.dump(settings, f, indent=2, ensure_ascii=False)
         f.write("\n")
     os.replace(tmp, SETTINGS)
-    print("{} hooks ({}); backup: {}".format("removed" if uninstall else "installed", ", ".join(EVENTS), backup))
+    print("{} hooks ({}); backup: {}".format(
+        "removed" if uninstall else "installed", ", ".join(EVENTS), backup or "none (no settings.json before)"))
 
 
 if __name__ == "__main__":

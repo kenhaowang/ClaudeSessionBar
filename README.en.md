@@ -13,14 +13,45 @@ A menu bar dashboard for Claude Code sessions on macOS: it lists every open sess
 - The [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude`), logged in
 - Optional: [GitHub CLI](https://cli.github.com/) (`gh`) for PR / CI status, [Cursor](https://cursor.com/) for opening branches
 
-## Install / update
+## Install
+
+1. Make sure the Xcode Command Line Tools are installed (`swift --version` prints a version if they are; otherwise run):
+
+   ```bash
+   xcode-select --install
+   ```
+
+2. Clone, build and install:
+
+   ```bash
+   git clone https://github.com/kenhaowang/ClaudeSessionBar.git
+   cd ClaudeSessionBar
+   ./build.sh install                   # build, copy to ~/Applications/ClaudeSessionBar.app and launch
+   ```
+
+   The app is built and signed on your own Mac, so Gatekeeper does not block it.
+
+3. Install the Claude Code hooks (they tell the app which session is waiting for a permission and which just finished):
+
+   ```bash
+   /usr/bin/python3 install_hooks.py    # writes ~/.claude/settings.json, backing up any existing file first
+   ```
+
+   Claude Code reads hooks when a session starts, so sessions that are already open need a restart to pick them up.
+
+4. Click the menu bar icon:
+   - The first time you click a session, macOS asks whether the app may control iTerm2 — click "Allow"
+   - Turn on "Launch at Login" at the bottom if you like
+   - Right-click ＋ and pick "Choose Folder…" to set where new sessions start
+
+## Update
 
 ```bash
-./build.sh install                       # build, copy to ~/Applications and launch
-/usr/bin/python3 install_hooks.py        # add the hooks to ~/.claude/settings.json (backs it up first)
+cd ClaudeSessionBar
+git pull
+./build.sh install                       # quits the running copy and launches the new one
+/usr/bin/python3 install_hooks.py        # only needed when the hooks changed; safe to re-run
 ```
-
-The first time you click a session, macOS asks whether the app may control iTerm2 — click "Allow".
 
 ## Uninstall
 
