@@ -1,105 +1,105 @@
 # Claude Session Bar
 
-English | [繁體中文](README.zh-TW.md)
+[English](README.en.md) | 繁體中文
 
-A menu bar dashboard for Claude Code sessions on macOS: it lists every open session, tells you what each one is waiting on, and jumps to the matching iTerm2 tab with one click.
+選單列上的 Claude Code session 儀表板：列出所有開著的 session、判斷「在等你做什麼」、點一下切到對應的 iTerm 分頁。
 
-> This is an unofficial personal project. It is not affiliated with or endorsed by Anthropic.
+> 這是個人的非官方專案，與 Anthropic 沒有關聯，也未經其認可。
 
-## Requirements
+## 需求
 
-- macOS 14 or later, with the Xcode Command Line Tools (Swift 5.9+)
-- [iTerm2](https://iterm2.com/) — sessions must run in iTerm2 for click-to-jump and opening new tabs
-- The [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude`), logged in
-- Optional: [GitHub CLI](https://cli.github.com/) (`gh`) for PR / CI status, [Cursor](https://cursor.com/) for opening branches
+- macOS 14 以上，並安裝 Xcode Command Line Tools（Swift 5.9+）
+- [iTerm2](https://iterm2.com/)：session 需要跑在 iTerm2 裡，才能點擊切換和開新分頁
+- [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI（`claude`）並已登入
+- 選用：[GitHub CLI](https://cli.github.com/)（`gh`）用來顯示 PR／CI 狀態；[Cursor](https://cursor.com/) 用來開啟分支
 
-## Install / update
+## 安裝 / 更新
 
 ```bash
-./build.sh install                       # build, copy to ~/Applications and launch
-/usr/bin/python3 install_hooks.py        # add the hooks to ~/.claude/settings.json (backs it up first)
+./build.sh install                       # 編譯、裝到 ~/Applications 並啟動
+/usr/bin/python3 install_hooks.py        # 把 hooks 寫進 ~/.claude/settings.json（會先備份）
 ```
 
-The first time you click a session, macOS asks whether the app may control iTerm2 — click "Allow".
+第一次點擊 session 時，macOS 會詢問是否允許控制 iTerm2，要按「允許」。
 
-## Uninstall
+## 移除
 
 ```bash
 /usr/bin/python3 install_hooks.py --uninstall
 rm -rf ~/Applications/ClaudeSessionBar.app ~/.claude/session-dashboard
 ```
 
-## Where the data comes from
+## 資料從哪來
 
-| Information | Source |
+| 資訊 | 來源 |
 |---|---|
-| Session list, running / idle | `claude agents --json` |
-| Title, branch, when you last spoke | `~/.claude/projects/**/<sessionId>.jsonl` |
-| Waiting for permission, background work | hooks write to `~/.claude/session-dashboard/state/` |
-| What it is waiting on, suggested name | `claude -p --model haiku` after each turn (uses your own Claude login and counts toward your usage), cached in `summaries/` |
-| Custom names, manual states | `names.json`, `overrides.json` |
+| session 清單、執行中／閒置 | `claude agents --json` |
+| 標題、branch、你上次發言時間 | `~/.claude/projects/**/<sessionId>.jsonl` |
+| 等你核准權限、背景工作 | hooks 寫入 `~/.claude/session-dashboard/state/` |
+| 在等你做什麼、建議名稱 | 每輪結束後用 `claude -p --model haiku` 判斷（用你自己的 Claude 登入，會算進你的用量），存在 `summaries/` |
+| 自訂名稱、手動狀態 | `names.json`、`overrides.json` |
 
-A manually set state goes back to automatic the next time you send that session a message.
+手動設定的狀態會在你下次對那個 session 發言後自動恢復成自動判斷。
 
-## New session
+## 開新 session
 
-The blue ＋ in the header opens a new tab in iTerm2's current window and runs `claude` in a folder of your choice. It defaults to your home directory; right-click ＋ and pick "Choose Folder…" to change it.
+標題列的藍色「＋」會在 iTerm 目前的視窗開新分頁，在指定的資料夾執行 `claude`。預設是家目錄；在「＋」上按右鍵選「選擇資料夾…」可以更換。
 
-## Restoring sessions after a restart
+## 重開機後恢復 session
 
-The app records open sessions in `open-sessions.json`. Before macOS logs out, restarts or shuts down (including forced updates) it freezes that record; on the next launch it compares, and any session that did not come back is listed in a banner at the top. You can reopen them all, or one by one, with `cd <original dir> && claude --resume <id>` (`--resume` keeps the id, so groups and names carry over). Without a restart, a banner also appears when 3 or more sessions disappear at once (e.g. iTerm2 crashed).
+App 會把開著的 session 記在 `open-sessions.json`。macOS 登出／重開／關機（含強制更新）前會先凍結這份記錄；開機後 App 一啟動就比對，沒回來的 session 會出現在列表最上方的提示，可以全部或逐一用 `cd <原目錄> && claude --resume <id>` 開回來（`--resume` 沿用原 id，群組、名稱都接得上）。沒重開機時，同時少了 3 個以上（例如 iTerm 當掉）也會提示。
 
-## PR and CI status
+## PR 與 CI 狀態
 
-A session's PR is the last PR link in its conversation that belongs to the same repo (by git origin). Status, reviews and CI (both check runs and commit statuses) come from `gh pr view`. Open PRs refresh every 2 minutes (every minute while CI runs), merged / closed ones every 30 minutes. Click `#number` to open the PR in the browser.
+session 對話裡最後出現、且屬於同一個 repo（看 git origin）的 PR 連結，就是這個 session 的 PR。用 `gh pr view` 抓狀態、review、CI（check run 與 commit status 都算），開著的 PR 每 2 分鐘更新（CI 跑中 1 分鐘）、已合併／關閉的 30 分鐘。點 `#號碼` 用瀏覽器開 PR。
 
-## Open a branch in Cursor
+## 在 Cursor 開啟分支
 
-A session's "⋯" menu has "Open <branch> in Cursor": if the branch is already checked out in a worktree (including the main checkout) Cursor opens it directly; otherwise the row asks whether to create `.claude/worktrees/<branch, with / replaced by ->` and only runs `git worktree add` after you confirm.
+session 的「⋯」選單有「在 Cursor 開啟 <分支>」：分支已經在某個 worktree（含主目錄）就直接用 Cursor 開；沒有的話會在該列詢問是否建立 `.claude/worktrees/<分支，/ 換成 ->`，確認後才執行 `git worktree add`。
 
-Note: the branch is whatever was checked out when the session's last message was written; when several sessions share one checkout, another session may have switched it.
+注意：分支取自 session 最後一則訊息當下 checkout 所在的分支；多個 session 共用同一份 checkout 時，可能是別的 session 切過去的分支。
 
-## Groups
+## 分組
 
-- The row of tabs under the title is All / Ungrouped / your groups; click a tab to show only that group, tabs wrap when they don't fit
-- The number on a tab is its session count; the small orange badge is how many are waiting on you
-- ＋ creates a group; or pick "Move to Group → New Group…" in a session's "⋯" menu to create one and file the session at once
-- Drag a session onto a group tab to move it there; drag it onto "Ungrouped" to take it out
-- Tabs can be reordered by dragging, "All" and "Ungrouped" included; a blue "|" marks the drop point — the left half of a tab inserts before it, the right half after it, and dropping on ＋ moves it to the end
-- Right-click a group tab (or use the "⋯" next to the selected one) to rename it, move it left / right, or delete it (its sessions go back to Ungrouped)
-- In "All", each session shows the group it belongs to
-- Groups, tab order and the selected tab are stored in `groups.json`, keyed by sessionId
+- 標題下方是一排群組標籤：全部／未分組／你建立的群組；點標籤就只看那一組，放不下會自動換行
+- 標籤上的數字是 session 數，橘色小圈是「在等你」的數量
+- 「＋」新增群組；或在 session 的「⋯」選單選「移到群組 → 新增群組…」，建立後直接放進去
+- 把 session 拖到群組標籤上就會移過去；拖到「未分組」就是移出
+- 標籤可以拖曳排序，「全部」和「未分組」也可以；拖動時會出現藍色「|」標出落點：游標在目標標籤左半邊就插在它前面、右半邊就插在後面，拖到「＋」上就移到最後
+- 群組標籤按右鍵（或選中後右邊的「⋯」）可以改名、往左／右移、刪除（刪除後 session 回到未分組）
+- 在「全部」裡，每個 session 會顯示它所屬的群組
+- 群組、標籤順序與目前選中的標籤存在 `groups.json`，以 sessionId 對應
 
-## Debugging
+## 除錯
 
 ```bash
-.build/release/ClaudeSessionBar --dump               # print the current state (including groups)
-.build/release/ClaudeSessionBar --dump --summarize   # run the Haiku summaries first, then print
-.build/release/ClaudeSessionBar --snapshot out.png   # render the popover offscreen to an image (add --dark for dark mode)
+.build/release/ClaudeSessionBar --dump               # 印出目前的判斷結果（含分組）
+.build/release/ClaudeSessionBar --dump --summarize   # 先補跑 Haiku 再印
+.build/release/ClaudeSessionBar --snapshot out.png   # 離線把選單內容畫成圖片（加 --dark 看暗色）
 
-# Launch the real menu bar app, open its popover, take screenshots, then quit
+# 啟動真正的選單列 App、自己打開彈出視窗並截圖，然後結束
 build/ClaudeSessionBar.app/Contents/MacOS/ClaudeSessionBar --selftest /tmp/csb-selftest
 
-# Show where "Open in Cursor" would go for each session (read-only)
+# 每個 session 的「在 Cursor 開啟」會開哪裡（唯讀）
 .build/release/ClaudeSessionBar --worktree-plan
 
-# Print each session's PR status (calls gh)
+# 印出每個 session 的 PR 狀態（會呼叫 gh）
 .build/release/ClaudeSessionBar --dump --prs
 
-# Check the restart-restore logic (point it at an empty temp folder)
+# 重開機恢復邏輯檢查（要指向空的暫存資料夾）
 mkdir -p /tmp/csb-restore && CSB_DASHBOARD_DIR=/tmp/csb-restore .build/release/ClaudeSessionBar --check-restore
 
-# Check PR link parsing and CI evaluation
+# PR 連結解析與 CI 判斷檢查
 .build/release/ClaudeSessionBar --check-pr
 
-# Check worktree creation (runs in a throwaway test repo, deleted afterwards)
+# worktree 建立邏輯檢查（在暫存的測試 repo 跑，跑完刪除）
 .build/release/ClaudeSessionBar --check-worktree
 
-# Check group operations; always point it at a copy, or it edits your real groups.json
+# 群組操作檢查；一定要指向副本，否則會改到真的 groups.json
 cp -R ~/.claude/session-dashboard /tmp/csb-copy && rm -f /tmp/csb-copy/groups.json
 CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 ```
 
-## License
+## 授權
 
 [MIT](LICENSE)
