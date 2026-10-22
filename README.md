@@ -1,6 +1,6 @@
 # Claude Session Bar
 
-[English](README.en.md) | 繁體中文
+繁體中文 | [English](README.en.md)
 
 選單列上的 Claude Code session 儀表板：列出所有開著的 session、判斷「在等你做什麼」、點一下切到對應的 iTerm 分頁。
 
