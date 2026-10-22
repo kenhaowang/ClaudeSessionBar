@@ -139,7 +139,7 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 第一個公開版本。
 
-- 選單列圖示依「在等你」的 session 數量變化：🌳 0–1、🍌 2–5、🍊 7–10、🔥 11 以上、🎂 剛好 6 或 19
+- 選單列圖示會依「在等你」的 session 數量變化
 - 列出所有開著的 Claude Code session，顯示等你核准、等你回覆、執行中、背景執行、閒置、完成等狀態，點一下切到對應的 iTerm2 分頁
 - 每輪結束後用 Haiku 判斷 session 在等你做什麼，並建議名稱
 - 自訂 session 名稱、手動設定狀態（下次發言後自動恢復）

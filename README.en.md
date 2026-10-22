@@ -139,7 +139,7 @@ Current version: **v1.0.0** ([all releases](https://github.com/kenhaowang/Claude
 
 First public release.
 
-- The menu bar icon follows how many sessions are waiting on you: 🌳 0–1, 🍌 2–5, 🍊 7–10, 🔥 11+, 🎂 exactly 6 or 19
+- The menu bar icon changes with how many sessions are waiting on you
 - Lists every open Claude Code session with its state (needs approval, needs reply, running, background, idle, done, …); click one to jump to its iTerm2 tab
 - After each turn, Haiku works out what the session is waiting on and suggests a name
 - Custom session names and manual states (back to automatic after your next message)
