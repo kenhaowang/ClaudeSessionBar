@@ -144,6 +144,16 @@ enum NewGroupTarget: Equatable {
     case row(String)
 }
 
+/// Bootstrap's primary / success / warning / danger / secondary; tapping the title cycles them.
+enum AccentTheme: String, CaseIterable {
+    case blue, green, yellow, red, gray
+
+    var next: AccentTheme {
+        let all = Self.allCases
+        return all[(all.firstIndex(of: self)! + 1) % all.count]
+    }
+}
+
 enum SortMode: String, CaseIterable, Identifiable {
     case state, stalest
 

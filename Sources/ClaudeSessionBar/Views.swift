@@ -15,6 +15,23 @@ extension WorkState {
     }
 }
 
+extension AccentTheme {
+    var color: Color {
+        switch self {
+        case .blue: return Color(red: 0x0d / 255, green: 0x6e / 255, blue: 0xfd / 255)
+        case .green: return Color(red: 0x19 / 255, green: 0x87 / 255, blue: 0x54 / 255)
+        case .yellow: return Color(red: 0xff / 255, green: 0xc1 / 255, blue: 0x07 / 255)
+        case .red: return Color(red: 0xdc / 255, green: 0x35 / 255, blue: 0x45 / 255)
+        case .gray: return Color(red: 0x6c / 255, green: 0x75 / 255, blue: 0x7d / 255)
+        }
+    }
+
+    /// Text and glyphs drawn on top of the colour; yellow is too light for white (as in Bootstrap).
+    var onColor: Color {
+        self == .yellow ? Color(red: 0x21 / 255, green: 0x25 / 255, blue: 0x29 / 255) : .white
+    }
+}
+
 private struct ContentHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
@@ -92,14 +109,11 @@ struct PopoverView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text("Claude Sessions").font(.headline).lineLimit(1).fixedSize()
+                    .onTapGesture { store.accent = store.accent.next }
+                    .help(tr("點一下換主題色", "Click to change the accent colour"))
+                if Today.isCakeDay { Text(verbatim: "🎂").font(.headline) }
                 Spacer(minLength: 4)
-                Picker(tr("排序", "Sort"), selection: $store.sortMode) {
-                    ForEach(SortMode.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .controlSize(.small)
-                .fixedSize()
+                SortSwitch(store: store)
             }
             HStack(spacing: 10) {
                 if store.needsYouCount > 0 {
@@ -113,19 +127,19 @@ struct PopoverView: View {
                 }
                 Spacer(minLength: 4)
                 Button {
-                    store.openNewSession()
+                    store.showNewSessionMenu()
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 17))
                         .symbolRenderingMode(.palette)
-                        .foregroundStyle(Color.white, Color.accentColor)
+                        .foregroundStyle(store.accent.onColor, store.accent.color)
                 }
                 .buttonStyle(.borderless)
                 .contextMenu {
                     Button(tr("選擇資料夾…", "Choose Folder…")) { store.chooseNewSessionDirectory() }
                 }
-                .help(tr("在 \((store.newSessionDirectory as NSString).abbreviatingWithTildeInPath) 開新的 Claude session；右鍵可換資料夾",
-                         "Start a new Claude session in \((store.newSessionDirectory as NSString).abbreviatingWithTildeInPath); right-click to change the folder"))
+                .help(tr("在 \((store.newSessionDirectory as NSString).abbreviatingWithTildeInPath) 開新的 Claude session，可選要放進哪個群組",
+                         "Start a new Claude session in \((store.newSessionDirectory as NSString).abbreviatingWithTildeInPath) and pick its group"))
                 Button {
                     store.language = store.language == .zh ? .en : .zh
                 } label: {
@@ -158,6 +172,7 @@ struct PopoverView: View {
             Spacer()
             Toggle(tr("登入時啟動", "Launch at Login"), isOn: Binding(get: { store.launchAtLogin }, set: { store.launchAtLogin = $0 }))
                 .toggleStyle(.checkbox)
+                .tint(store.accent.color)
                 .font(.caption)
             Button(tr("結束 App", "Quit")) { NSApp.terminate(nil) }
                 .buttonStyle(.borderless)
@@ -247,7 +262,7 @@ struct GroupBar: View {
                 .buttonStyle(.plain)
                 .help(tr("新增群組；把標籤拖到這裡會移到最後", "New group; drop a tab here to move it to the end"))
                 .overlay(alignment: .leading) {
-                    if store.dragKind != nil && plusDropSide != nil { InsertionBar().offset(x: -4) }
+                    if store.dragKind != nil && plusDropSide != nil { InsertionBar(color: store.accent.color).offset(x: -4) }
                 }
                 .onDrop(of: [.text], delegate: TabDropDelegate(target: nil, store: store, width: 0, side: $plusDropSide))
                 .onChange(of: store.dragKind) { _, kind in
@@ -343,7 +358,7 @@ struct GroupChip: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Capsule().strokeBorder(Color.accentColor, lineWidth: 1.5))
+                    .background(Capsule().strokeBorder(store.accent.color, lineWidth: 1.5))
             } else if let group {
                 draggableChip.contextMenu { GroupMenuItems(group: group, store: store) }
             } else {
@@ -359,7 +374,7 @@ struct GroupChip: View {
         )
         .overlay(alignment: dropSide == .after ? .trailing : .leading) {
             if store.dragKind != nil && (dropSide == .before || dropSide == .after) {
-                InsertionBar().offset(x: dropSide == .after ? 4 : -4)
+                InsertionBar(color: store.accent.color).offset(x: dropSide == .after ? 4 : -4)
             }
         }
         .onDrop(of: [.text], delegate: TabDropDelegate(target: tab, store: store, width: width, side: $dropSide))
@@ -380,7 +395,7 @@ struct GroupChip: View {
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Capsule().fill(Color.accentColor.opacity(0.85)))
+                .background(Capsule().fill(store.accent.color.opacity(0.85)))
                 .foregroundStyle(.white)
         }
     }
@@ -412,16 +427,16 @@ struct GroupChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(Capsule().fill(chipFill))
-        .overlay(Capsule().strokeBorder(isSessionDropTarget ? Color.accentColor : Color.clear, lineWidth: 1.5))
-        .foregroundStyle(isSelected ? Color.white : Color.primary)
+        .overlay(Capsule().strokeBorder(isSessionDropTarget ? store.accent.color : Color.clear, lineWidth: 1.5))
+        .foregroundStyle(isSelected ? store.accent.onColor : Color.primary)
         .contentShape(Capsule())
         .onTapGesture { store.select(filter) }
         .help(group == nil ? tr("拖曳可調整順序", "Drag to reorder") : tr("拖曳可調整順序；右鍵可改名或刪除；把 session 拖到這裡就會歸進這組", "Drag to reorder; right-click to rename or delete; drop a session here to file it"))
     }
 
     private var chipFill: Color {
-        if isSelected { return .accentColor }
-        if isSessionDropTarget { return Color.accentColor.opacity(0.25) }
+        if isSelected { return store.accent.color }
+        if isSessionDropTarget { return store.accent.color.opacity(0.25) }
         return Color.primary.opacity(0.07)
     }
 }
@@ -450,7 +465,7 @@ struct NewGroupChipField: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Capsule().strokeBorder(Color.accentColor, lineWidth: 1.5))
+        .background(Capsule().strokeBorder(store.accent.color, lineWidth: 1.5))
         .onAppear { focused = true }
     }
 }
@@ -501,7 +516,7 @@ struct SessionRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 titleLine
                 metaLine
-                if let pr = row.pr { PRLine(pr: pr, status: row.prStatus) }
+                if let pr = row.pr { PRLine(pr: pr, status: row.prStatus, accent: store.accent.color) }
                 detailLines
                 if isConfirmingClose { closeConfirmation }
                 if let proposal = worktreeProposal { worktreeConfirmation(proposal) }
@@ -525,7 +540,7 @@ struct SessionRowView: View {
         .overlay {
             if isActiveTab {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.accentColor, lineWidth: 2)
+                    .strokeBorder(store.accent.color, lineWidth: 2)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
             }
@@ -564,7 +579,7 @@ struct SessionRowView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 if row.isBackground { Pill(text: tr("背景", "Background"), color: .gray) }
-                if isActiveTab { Pill(text: tr("目前分頁", "Current Tab"), color: .accentColor) }
+                if isActiveTab { Pill(text: tr("目前分頁", "Current Tab"), color: store.accent.color) }
             }
             Spacer(minLength: 4)
             Text(RelativeTime.text(row.lastSpokeAt))
@@ -583,7 +598,7 @@ struct SessionRowView: View {
                     .labelStyle(.titleAndIcon)
                     .font(.caption2)
                     .lineLimit(1)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(store.accent.color)
             }
             if let branch = row.branch {
                 Image(systemName: "arrow.triangle.branch")
@@ -721,9 +736,11 @@ struct Pill: View {
 
 /// The "|" shown in the gap where a dragged tab would land.
 struct InsertionBar: View {
+    let color: Color
+
     var body: some View {
         Capsule()
-            .fill(Color.accentColor)
+            .fill(color)
             .frame(width: 3)
             .padding(.vertical, -3)
     }
@@ -798,6 +815,7 @@ struct TabDropDelegate: DropDelegate {
 struct PRLine: View {
     let pr: PRRef
     let status: PRStatus?
+    let accent: Color
 
     var body: some View {
         HStack(spacing: 5) {
@@ -813,7 +831,7 @@ struct PRLine: View {
                 .labelStyle(.titleAndIcon)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Color.accentColor)
+            .foregroundStyle(accent)
             .help((status?.title.nilIfEmpty ?? pr.url) + tr("（點擊用瀏覽器開啟）", " (click to open in the browser)"))
             if let status {
                 separator
@@ -904,7 +922,7 @@ struct RestoreBanner: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.counterclockwise.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(store.accent.color)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.system(size: 12, weight: .semibold))
                     Text(tr("中斷於 ", "Interrupted ") + Date(timeIntervalSince1970: pending.interruptedAt).formatted(.dateTime.month().day().hour().minute().locale(L10n.locale)))
@@ -919,6 +937,7 @@ struct RestoreBanner: View {
             HStack(spacing: 8) {
                 Button(tr("全部重新開啟", "Reopen All")) { store.reopen(pending.sessions) }
                     .buttonStyle(.borderedProminent)
+                    .tint(store.accent.color)
                 Button(tr("忽略", "Dismiss")) { store.dismissRestore() }
             }
             .controlSize(.small)
@@ -950,6 +969,33 @@ struct RestoreBanner: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.accentColor.opacity(0.08))
+        .background(store.accent.color.opacity(0.08))
+    }
+}
+
+/// Two-segment sort switch. AppKit's segmented control ignores SwiftUI tint, so it is drawn here
+/// to follow the accent theme like the group tabs do.
+struct SortSwitch: View {
+    @ObservedObject var store: Store
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(SortMode.allCases) { mode in
+                let selected = store.sortMode == mode
+                Text(mode.label)
+                    .font(.caption.weight(selected ? .semibold : .regular))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                    .foregroundStyle(selected ? store.accent.onColor : Color.primary)
+                    .background(RoundedRectangle(cornerRadius: 5).fill(selected ? store.accent.color : Color.clear))
+                    .contentShape(Rectangle())
+                    .onTapGesture { store.sortMode = mode }
+            }
+        }
+        .padding(2)
+        .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.07)))
+        .help(tr("排序", "Sort"))
     }
 }

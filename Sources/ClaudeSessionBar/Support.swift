@@ -168,6 +168,24 @@ extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }
 
+enum Today {
+    /// CSB_TODAY=YYYY-MM-DD lets tests pretend it is another day.
+    static var date: Date {
+        if let override = ProcessInfo.processInfo.environment["CSB_TODAY"] {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            if let date = formatter.date(from: override) { return date }
+        }
+        return Date()
+    }
+
+    /// June 19 gets a cake next to the title, by request.
+    static var isCakeDay: Bool {
+        let parts = Calendar.current.dateComponents([.month, .day], from: date)
+        return parts.month == 6 && parts.day == 19
+    }
+}
+
 func waitingText(_ count: Int) -> String {
     let noun = count == 1 ? "session" : "sessions"
     return tr("\(count) 個 \(noun) 在等你看", "\(count) \(noun) waiting for you")

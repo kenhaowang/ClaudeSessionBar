@@ -65,8 +65,8 @@ enum ITerm {
         activateThen { openTab(running: "claude attach " + shellQuote(jobId)) }
     }
 
-    static func openNewSession(in directory: String) {
-        activateThen { openTab(running: "cd " + shellQuote(directory) + " && claude") }
+    static func openNewSession(command: String) {
+        activateThen { openTab(running: command) }
     }
 
     /// Opens a tab in iTerm's current window (or a new window when none is open) and types

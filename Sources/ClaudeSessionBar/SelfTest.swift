@@ -148,6 +148,24 @@ enum SelfTest {
         store.loadPersisted()
         expect(!store.groupDataContainsAssignment(to: beta), "no dangling assignments on disk")
 
+        let picked = store.prepareNewSession(groupId: alpha)
+        expect(store.groupId(of: picked.sessionId) == alpha, "＋ with a group files the new session there up front")
+        expect(picked.command.hasSuffix("&& claude --session-id " + picked.sessionId)
+            && picked.command.hasPrefix("cd '"), "＋ starts claude in the chosen folder with that session id")
+        expect(UUID(uuidString: picked.sessionId) != nil, "the session id is a valid UUID")
+        let none = store.prepareNewSession(groupId: nil)
+        expect(store.groupId(of: none.sessionId) == nil, "＋ with 先不放 leaves the session ungrouped")
+        let stale = store.prepareNewSession(groupId: "no-such-group")
+        expect(store.groupId(of: stale.sessionId) == nil, "a deleted group is not assigned")
+        expect(picked.sessionId != none.sessionId, "each new session gets its own id")
+        expect(store.createGroup(named: "   ") == nil, "新增資料夾 with a blank name creates nothing")
+        if let fresh = store.createGroup(named: "From ＋") {
+            let opened = store.prepareNewSession(groupId: fresh)
+            expect(store.groupName(of: opened.sessionId) == "From ＋", "新增資料夾 files the new session into the group it just made")
+        } else {
+            expect(false, "新增資料夾 returns the new group's id")
+        }
+
         // v0.2 wrote per-group `collapsed` and `ungroupedCollapsed`, and no `selected`.
         let legacy = """
             {"groups":[{"id":"g1","name":"Legacy","collapsed":true}],"assignments":{"\(ids[0])":"g1"},"ungroupedCollapsed":false}

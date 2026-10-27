@@ -35,6 +35,14 @@ final class Store: ObservableObject {
         }
     }
 
+    /// CSB_ACCENT lets tests render a colour without touching the saved choice.
+    @Published var accent: AccentTheme =
+        AccentTheme(rawValue: ProcessInfo.processInfo.environment["CSB_ACCENT"] ?? "")
+        ?? AccentTheme(rawValue: UserDefaults.standard.string(forKey: "accent") ?? "") ?? .blue
+    {
+        didSet { UserDefaults.standard.set(accent.rawValue, forKey: "accent") }
+    }
+
     var autoSummarize = true
     var autoFetchPRs = true
     /// Only the real menu bar app records open sessions; CLI and self-test runs must not.
@@ -551,14 +559,17 @@ final class Store: ObservableObject {
         return result
     }
 
-    func createGroup(named name: String, assigning sessionId: String? = nil) {
+    /// Returns the new group's id, or nil when the name is blank.
+    @discardableResult
+    func createGroup(named name: String, assigning sessionId: String? = nil) -> String? {
         newGroupTarget = nil
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty else { return nil }
         let group = SessionGroup(id: UUID().uuidString, name: trimmed)
         groupData.groups.append(group)
         if let sessionId { groupData.assignments[sessionId] = group.id }
         saveGroups()
+        return group.id
     }
 
     func renameGroup(_ id: String, to name: String) {
@@ -669,9 +680,68 @@ final class Store: ObservableObject {
         }
     }
 
-    func openNewSession() {
+    /// Starts `claude` with a session id chosen here, so the new session can be filed into
+    /// `groupId` before it even shows up (nil leaves it in 未分組).
+    func openNewSession(groupId: String? = nil) {
         closePopover?()
-        ITerm.openNewSession(in: newSessionDirectory)
+        ITerm.openNewSession(command: prepareNewSession(groupId: groupId).command)
+    }
+
+    func prepareNewSession(groupId: String?) -> (sessionId: String, command: String) {
+        let sessionId = UUID().uuidString.lowercased()
+        if let groupId, groupData.groups.contains(where: { $0.id == groupId }) {
+            groupData.assignments[sessionId] = groupId
+            saveGroups()
+        }
+        let command = "cd " + ITerm.shellQuote(newSessionDirectory) + " && claude --session-id " + sessionId
+        return (sessionId, command)
+    }
+
+    /// The ＋ button's menu: which group the new session goes into, or none, plus the folder it
+    /// starts in. A native menu keeps the button's two-colour symbol (SwiftUI's Menu would not).
+    func showNewSessionMenu() {
+        let menu = NSMenu()
+        menu.addItem(ClosureMenuItem(title: tr("直接開新分頁", "Just Open a New Tab")) { [weak self] in self?.openNewSession() })
+        menu.addItem(.separator())
+        let header = NSMenuItem(title: tr("新 session 放到：", "Put the new session in:"), action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        for group in groups {
+            let item = ClosureMenuItem(title: group.name) { [weak self] in self?.openNewSession(groupId: group.id) }
+            item.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+            menu.addItem(item)
+        }
+        let newFolder = ClosureMenuItem(title: tr("新增資料夾…", "New Folder…")) { [weak self] in
+            self?.createGroupAndOpenSession()
+        }
+        newFolder.image = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: nil)
+        if !groups.isEmpty { menu.addItem(.separator()) }
+        menu.addItem(newFolder)
+        menu.addItem(.separator())
+        let folder = (newSessionDirectory as NSString).abbreviatingWithTildeInPath
+        menu.addItem(ClosureMenuItem(title: tr("工作目錄：\(folder)（更換…）", "Working directory: \(folder) (Change…)")) { [weak self] in
+            self?.chooseNewSessionDirectory()
+        })
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
+
+    /// Asks for a group name, then creates the group and starts a session filed in it.
+    func createGroupAndOpenSession() {
+        closePopover?()
+        let alert = NSAlert()
+        alert.messageText = tr("新增資料夾", "New Folder")
+        alert.informativeText = tr("建立一個群組，並把新 session 放進去。", "Creates a group and puts the new session in it.")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        field.placeholderString = tr("群組名稱", "Group name")
+        alert.accessoryView = field
+        alert.addButton(withTitle: tr("建立並開啟", "Create & Open"))
+        alert.addButton(withTitle: tr("取消", "Cancel"))
+        alert.window.initialFirstResponder = field
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn, let groupId = createGroup(named: field.stringValue) else {
+            return
+        }
+        openNewSession(groupId: groupId)
     }
 
     func chooseNewSessionDirectory() {
