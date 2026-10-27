@@ -751,15 +751,17 @@ final class Store: ObservableObject {
         menu.addItem(ClosureMenuItem(title: tr("終端機：\(terminal)（更換…）", "Terminal: \(terminal) (Change…)")) {
             [weak self] in self?.chooseTerminal()
         })
-        menu.addItem(.separator())
-        let header = NSMenuItem(title: tr("語言", "Language"), action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(header)
-        for (lang, title) in [(AppLanguage.zh, "繁體中文"), (.en, "English")] {
+        let languages = [(AppLanguage.zh, "繁體中文"), (.en, "English")]
+        let current = languages.first { $0.0 == language }?.1 ?? ""
+        let languageItem = NSMenuItem(title: tr("語言：\(current)", "Language: \(current)"), action: nil, keyEquivalent: "")
+        let languageMenu = NSMenu()
+        for (lang, title) in languages {
             let item = ClosureMenuItem(title: title) { [weak self] in self?.language = lang }
             item.state = language == lang ? .on : .off
-            menu.addItem(item)
+            languageMenu.addItem(item)
         }
+        languageItem.submenu = languageMenu
+        menu.addItem(languageItem)
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 
