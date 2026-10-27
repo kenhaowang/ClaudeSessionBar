@@ -2,7 +2,7 @@
 
 繁體中文 | [English](README.en.md)
 
-選單列上的 Claude Code session 儀表板：列出所有開著的 session、判斷「在等你做什麼」、點一下切到對應的 iTerm 分頁。
+選單列上的 Claude Code session 儀表板：列出所有開著的 session、判斷「在等你做什麼」、點一下切到對應的 iTerm2／Ghostty 分頁。
 
 > 這是個人的非官方專案，與 Anthropic 沒有關聯，也未經其認可。
 
@@ -11,9 +11,9 @@
 ## 需求
 
 - macOS 14 以上，並安裝 Xcode Command Line Tools（Swift 5.9+）
-- [iTerm2](https://iterm2.com/)：session 需要跑在 iTerm2 裡，才能點擊切換和開新分頁
+- [iTerm2](https://iterm2.com/) 或 [Ghostty](https://ghostty.org/) 1.3 以上：session 需要跑在其中之一，才能點擊切換和開新分頁（Ghostty 的限制見下方「終端機」）
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI（`claude`）並已登入
-- 選用：[GitHub CLI](https://cli.github.com/)（`gh`）用來顯示 PR／CI 狀態；[Cursor](https://cursor.com/) 用來開啟分支
+- 選用：[GitHub CLI](https://cli.github.com/)（`gh`）用來顯示 PR／CI 狀態；Cursor、VS Code 等編輯器用來開啟分支
 
 ## 安裝
 
@@ -42,8 +42,9 @@
    Claude Code 在 session 啟動時才讀 hooks，已經開著的 session 要重開才會套用。
 
 4. 選單列出現圖示後點開：
-   - 第一次點擊 session 時，macOS 會詢問是否允許控制 iTerm2，要按「允許」
+   - 第一次點擊 session 或開新分頁時，macOS 會詢問是否允許控制 iTerm2／Ghostty，要按「允許」
    - 底部可以勾選「登入時啟動」
+   - 右上角的齒輪可以切換介面語言（繁體中文／English）
    - 點「＋」→ 最下面的「工作目錄：…（更換…）」，設定開新 session 的資料夾
 
 ## 更新
@@ -76,7 +77,7 @@ rm -rf ~/Applications/ClaudeSessionBar.app ~/.claude/session-dashboard
 
 ## 開新 session
 
-標題列的「＋」會跳出選單，在 iTerm 目前的視窗開新分頁、在工作目錄執行 `claude`：
+標題列的「＋」會跳出選單，在終端機目前的視窗開新分頁、在工作目錄執行 `claude`（用哪個終端機見下方「終端機」）：
 
 - 「直接開新分頁」：不放進任何群組
 - 「新 session 放到：」下面列出所有群組，選一個就開新分頁並直接歸到那組
@@ -85,17 +86,28 @@ rm -rf ~/Applications/ClaudeSessionBar.app ~/.claude/session-dashboard
 
 新 session 會用 `claude --session-id <預先產生的 id>` 啟動，所以一開起來就在選好的群組裡。
 
+## 終端機
+
+支援 iTerm2 和 Ghostty（1.3 以上）。開新分頁預設開在你最後使用的那一個；兩個都沒開過時，用正在執行的那一個，都沒在執行就用有安裝的（iTerm2 優先）。要固定用某一個，點右上角的齒輪 →「終端機」，在跳出的視窗選 iTerm2 或 Ghostty 的 App。
+
+點 session 切換分頁時，會用 tty 在兩邊找。Ghostty 1.3.x 的 AppleScript 還沒提供 tty，所以：
+
+- 只有當該資料夾裡剛好只開著一個 Ghostty 分頁時，才能切到正確的分頁
+- 「目前分頁」的標示、改名同步到分頁標題、結束 session 時一併關閉分頁，這三項在 Ghostty 1.3.x 不會作用
+
+之後版本的 Ghostty 有提供 tty 時，會自動改用 tty，上面的限制就會消失。
+
 ## 重開機後恢復 session
 
-App 會把開著的 session 記在 `open-sessions.json`。macOS 登出／重開／關機（含強制更新）前會先凍結這份記錄；開機後 App 一啟動就比對，沒回來的 session 會出現在列表最上方的提示，可以全部或逐一用 `cd <原目錄> && claude --resume <id>` 開回來（`--resume` 沿用原 id，群組、名稱都接得上）。沒重開機時，同時少了 3 個以上（例如 iTerm 當掉）也會提示。
+App 會把開著的 session 記在 `open-sessions.json`。macOS 登出／重開／關機（含強制更新）前會先凍結這份記錄；開機後 App 一啟動就比對，沒回來的 session 會出現在列表最上方的提示，可以全部或逐一用 `cd <原目錄> && claude --resume <id>` 開回來（`--resume` 沿用原 id，群組、名稱都接得上）。沒重開機時，同時少了 3 個以上（例如終端機當掉）也會提示。
 
 ## PR 與 CI 狀態
 
 session 對話裡最後出現、且屬於同一個 repo（看 git origin）的 PR 連結，就是這個 session 的 PR。用 `gh pr view` 抓狀態、review、CI（check run 與 commit status 都算），開著的 PR 每 2 分鐘更新（CI 跑中 1 分鐘）、已合併／關閉的 30 分鐘。點 `#號碼` 用瀏覽器開 PR。
 
-## 在 Cursor 開啟分支
+## 在編輯器開啟分支
 
-session 的「⋯」選單有「在 Cursor 開啟 <分支>」：分支已經在某個 worktree（含主目錄）就直接用 Cursor 開；沒有的話會在該列詢問是否建立 `.claude/worktrees/<分支，/ 換成 ->`，確認後才執行 `git worktree add`。
+session 的「⋯」選單會列出電腦裡裝了的編輯器，例如「在 Cursor 開啟 <分支>」、「在 VS Code 開啟 <分支>」（目前認得 Cursor、VS Code、Windsurf、Zed、PyCharm、Sublime Text）。分支已經在某個 worktree（含主目錄）就直接開；沒有的話會在該列詢問是否建立 `.claude/worktrees/<分支，/ 換成 ->`，確認後才執行 `git worktree add`。
 
 注意：分支取自 session 最後一則訊息當下 checkout 所在的分支；多個 session 共用同一份 checkout 時，可能是別的 session 切過去的分支。
 
@@ -120,7 +132,7 @@ session 的「⋯」選單有「在 Cursor 開啟 <分支>」：分支已經在�
 # 啟動真正的選單列 App、自己打開彈出視窗並截圖，然後結束
 build/ClaudeSessionBar.app/Contents/MacOS/ClaudeSessionBar --selftest /tmp/csb-selftest
 
-# 每個 session 的「在 Cursor 開啟」會開哪裡（唯讀）
+# 每個 session 的「在編輯器開啟」會開哪裡（唯讀）
 .build/release/ClaudeSessionBar --worktree-plan
 
 # 印出每個 session 的 PR 狀態（會呼叫 gh）
@@ -128,6 +140,9 @@ build/ClaudeSessionBar.app/Contents/MacOS/ClaudeSessionBar --selftest /tmp/csb-s
 
 # 重開機恢復邏輯檢查（要指向空的暫存資料夾）
 mkdir -p /tmp/csb-restore && CSB_DASHBOARD_DIR=/tmp/csb-restore .build/release/ClaudeSessionBar --check-restore
+
+# 檢查要送給 iTerm2／Ghostty 的 AppleScript 能否編譯（只編譯、不執行）
+.build/release/ClaudeSessionBar --check-terminals
 
 # PR 連結解析與 CI 判斷檢查
 .build/release/ClaudeSessionBar --check-pr

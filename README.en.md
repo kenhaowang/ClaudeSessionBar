@@ -2,7 +2,7 @@
 
 English | [繁體中文](README.md)
 
-A menu bar dashboard for Claude Code sessions on macOS: it lists every open session, tells you what each one is waiting on, and jumps to the matching iTerm2 tab with one click.
+A menu bar dashboard for Claude Code sessions on macOS: it lists every open session, tells you what each one is waiting on, and jumps to the matching iTerm2 or Ghostty tab with one click.
 
 > This is an unofficial personal project. It is not affiliated with or endorsed by Anthropic.
 
@@ -11,9 +11,9 @@ A menu bar dashboard for Claude Code sessions on macOS: it lists every open sess
 ## Requirements
 
 - macOS 14 or later, with the Xcode Command Line Tools (Swift 5.9+)
-- [iTerm2](https://iterm2.com/) — sessions must run in iTerm2 for click-to-jump and opening new tabs
+- [iTerm2](https://iterm2.com/) or [Ghostty](https://ghostty.org/) 1.3 or later — sessions must run in one of them for click-to-jump and opening new tabs (see "Terminals" below for Ghostty's limits)
 - The [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI (`claude`), logged in
-- Optional: [GitHub CLI](https://cli.github.com/) (`gh`) for PR / CI status, [Cursor](https://cursor.com/) for opening branches
+- Optional: [GitHub CLI](https://cli.github.com/) (`gh`) for PR / CI status, Cursor, VS Code or another editor for opening branches
 
 ## Install
 
@@ -42,8 +42,9 @@ A menu bar dashboard for Claude Code sessions on macOS: it lists every open sess
    Claude Code reads hooks when a session starts, so sessions that are already open need a restart to pick them up.
 
 4. Click the menu bar icon:
-   - The first time you click a session, macOS asks whether the app may control iTerm2 — click "Allow"
+   - The first time you click a session or open a tab, macOS asks whether the app may control iTerm2 / Ghostty — click "Allow"
    - Turn on "Launch at Login" at the bottom if you like
+   - The gear at the top right switches the interface language (繁體中文 / English)
    - Click ＋ → "Working directory: … (Change…)" at the bottom to set where new sessions start
 
 ## Update
@@ -76,7 +77,7 @@ A manually set state goes back to automatic the next time you send that session 
 
 ## New session
 
-＋ in the header opens a menu; each choice opens a new tab in iTerm2's current window and runs `claude` in the working directory:
+＋ in the header opens a menu; each choice opens a new tab in the terminal's current window and runs `claude` in the working directory (see "Terminals" below for which terminal):
 
 - "Just Open a New Tab": the session isn't put in any group
 - "Put the new session in:" lists your groups; pick one and the new session lands there
@@ -85,17 +86,28 @@ A manually set state goes back to automatic the next time you send that session 
 
 New sessions start with `claude --session-id <pre-generated id>`, so they show up in the chosen group right away.
 
+## Terminals
+
+iTerm2 and Ghostty (1.3 or later) are supported. By default new tabs open in whichever of the two you used last; if neither has been used yet, in the one that is running, and otherwise in the one that is installed (iTerm2 first). To pin one, click the gear at the top right → "Terminal" and pick the iTerm2 or Ghostty app in the window that opens.
+
+Clicking a session looks it up by tty in both. Ghostty 1.3.x does not expose ttys through AppleScript yet, so:
+
+- it can only jump to the right tab when that is the only Ghostty tab open in the session's folder
+- the "Current Tab" marker, syncing a rename to the tab title, and closing the tab when ending a session do not work with Ghostty 1.3.x
+
+Once a Ghostty release exposes ttys, the app uses them automatically and these limits go away.
+
 ## Restoring sessions after a restart
 
-The app records open sessions in `open-sessions.json`. Before macOS logs out, restarts or shuts down (including forced updates) it freezes that record; on the next launch it compares, and any session that did not come back is listed in a banner at the top. You can reopen them all, or one by one, with `cd <original dir> && claude --resume <id>` (`--resume` keeps the id, so groups and names carry over). Without a restart, a banner also appears when 3 or more sessions disappear at once (e.g. iTerm2 crashed).
+The app records open sessions in `open-sessions.json`. Before macOS logs out, restarts or shuts down (including forced updates) it freezes that record; on the next launch it compares, and any session that did not come back is listed in a banner at the top. You can reopen them all, or one by one, with `cd <original dir> && claude --resume <id>` (`--resume` keeps the id, so groups and names carry over). Without a restart, a banner also appears when 3 or more sessions disappear at once (e.g. the terminal crashed).
 
 ## PR and CI status
 
 A session's PR is the last PR link in its conversation that belongs to the same repo (by git origin). Status, reviews and CI (both check runs and commit statuses) come from `gh pr view`. Open PRs refresh every 2 minutes (every minute while CI runs), merged / closed ones every 30 minutes. Click `#number` to open the PR in the browser.
 
-## Open a branch in Cursor
+## Open a branch in an editor
 
-A session's "⋯" menu has "Open <branch> in Cursor": if the branch is already checked out in a worktree (including the main checkout) Cursor opens it directly; otherwise the row asks whether to create `.claude/worktrees/<branch, with / replaced by ->` and only runs `git worktree add` after you confirm.
+A session's "⋯" menu lists the editors installed on your Mac, e.g. "Open <branch> in Cursor" and "Open <branch> in VS Code" (Cursor, VS Code, Windsurf, Zed, PyCharm and Sublime Text are recognised). If the branch is already checked out in a worktree (including the main checkout) the editor opens it directly; otherwise the row asks whether to create `.claude/worktrees/<branch, with / replaced by ->` and only runs `git worktree add` after you confirm.
 
 Note: the branch is whatever was checked out when the session's last message was written; when several sessions share one checkout, another session may have switched it.
 
@@ -120,7 +132,7 @@ Note: the branch is whatever was checked out when the session's last message was
 # Launch the real menu bar app, open its popover, take screenshots, then quit
 build/ClaudeSessionBar.app/Contents/MacOS/ClaudeSessionBar --selftest /tmp/csb-selftest
 
-# Show where "Open in Cursor" would go for each session (read-only)
+# Show where "Open in <editor>" would go for each session (read-only)
 .build/release/ClaudeSessionBar --worktree-plan
 
 # Print each session's PR status (calls gh)
@@ -128,6 +140,9 @@ build/ClaudeSessionBar.app/Contents/MacOS/ClaudeSessionBar --selftest /tmp/csb-s
 
 # Check the restart-restore logic (point it at an empty temp folder)
 mkdir -p /tmp/csb-restore && CSB_DASHBOARD_DIR=/tmp/csb-restore .build/release/ClaudeSessionBar --check-restore
+
+# Check that the AppleScript sent to iTerm2 / Ghostty compiles (compiles only, never runs)
+.build/release/ClaudeSessionBar --check-terminals
 
 # Check PR link parsing and CI evaluation
 .build/release/ClaudeSessionBar --check-pr
