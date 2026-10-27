@@ -6,6 +6,8 @@ A menu bar dashboard for Claude Code sessions on macOS: it lists every open sess
 
 > This is an unofficial personal project. It is not affiliated with or endorsed by Anthropic.
 
+<p align="center"><img src="docs/screenshot-en.png" width="512" alt="The menu bar icon and the open session list"></p>
+
 ## Requirements
 
 - macOS 14 or later, with the Xcode Command Line Tools (Swift 5.9+)
@@ -132,6 +134,11 @@ mkdir -p /tmp/csb-restore && CSB_DASHBOARD_DIR=/tmp/csb-restore .build/release/C
 
 # Check worktree creation (runs in a throwaway test repo, deleted afterwards)
 .build/release/ClaudeSessionBar --check-worktree
+
+# Regenerate the README screenshot with made-up sessions (a real screen capture; the terminal needs
+# Screen Recording permission, otherwise the app draws its own windows instead)
+CSB_DEMO=1 CSB_LANG=en CSB_DASHBOARD_DIR=/tmp/csb-demo \
+  build/ClaudeSessionBar.app/Contents/MacOS/ClaudeSessionBar --screenshot docs/screenshot-en.png
 
 # Check group operations; always point it at a copy, or it edits your real groups.json
 cp -R ~/.claude/session-dashboard /tmp/csb-copy && rm -f /tmp/csb-copy/groups.json

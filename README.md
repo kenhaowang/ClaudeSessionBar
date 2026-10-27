@@ -6,6 +6,8 @@
 
 > 這是個人的非官方專案，與 Anthropic 沒有關聯，也未經其認可。
 
+<p align="center"><img src="docs/screenshot-zh.png" width="512" alt="選單列圖示與展開的 session 列表"></p>
+
 ## 需求
 
 - macOS 14 以上，並安裝 Xcode Command Line Tools（Swift 5.9+）
@@ -132,6 +134,10 @@ mkdir -p /tmp/csb-restore && CSB_DASHBOARD_DIR=/tmp/csb-restore .build/release/C
 
 # worktree 建立邏輯檢查（在暫存的測試 repo 跑，跑完刪除）
 .build/release/ClaudeSessionBar --check-worktree
+
+# 用虛構的 session 重新產生 README 截圖（真的螢幕截圖，終端機需有「螢幕錄製」權限；沒有的話改用 App 自己畫的圖）
+CSB_DEMO=1 CSB_LANG=zh CSB_DASHBOARD_DIR=/tmp/csb-demo \
+  build/ClaudeSessionBar.app/Contents/MacOS/ClaudeSessionBar --screenshot docs/screenshot-zh.png
 
 # 群組操作檢查；一定要指向副本，否則會改到真的 groups.json
 cp -R ~/.claude/session-dashboard /tmp/csb-copy && rm -f /tmp/csb-copy/groups.json
