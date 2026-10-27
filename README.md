@@ -42,7 +42,7 @@
 4. 選單列出現圖示後點開：
    - 第一次點擊 session 時，macOS 會詢問是否允許控制 iTerm2，要按「允許」
    - 底部可以勾選「登入時啟動」
-   - 在「＋」上按右鍵選「選擇資料夾…」，設定開新 session 的資料夾
+   - 點「＋」→ 最下面的「工作目錄：…（更換…）」，設定開新 session 的資料夾
 
 ## 更新
 
@@ -74,7 +74,14 @@ rm -rf ~/Applications/ClaudeSessionBar.app ~/.claude/session-dashboard
 
 ## 開新 session
 
-標題列的藍色「＋」會在 iTerm 目前的視窗開新分頁，在指定的資料夾執行 `claude`。預設是家目錄；在「＋」上按右鍵選「選擇資料夾…」可以更換。
+標題列的「＋」會跳出選單，在 iTerm 目前的視窗開新分頁、在工作目錄執行 `claude`：
+
+- 「直接開新分頁」：不放進任何群組
+- 「新 session 放到：」下面列出所有群組，選一個就開新分頁並直接歸到那組
+- 「新增資料夾…」：輸入名稱建立新群組，並把新 session 放進去
+- 「工作目錄：<資料夾>（更換…）」：更換開新 session 的資料夾（預設是家目錄；在「＋」上按右鍵選「選擇資料夾…」也可以）
+
+新 session 會用 `claude --session-id <預先產生的 id>` 啟動，所以一開起來就在選好的群組裡。
 
 ## 重開機後恢復 session
 
@@ -133,7 +140,12 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.0.0**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.1（2026-10-27）
+
+- 「＋」改成選單：可以直接開新分頁、選擇新 session 要放進哪個群組，或當場新增資料夾並放進去
+- 工作目錄顯示在「＋」選單最下面，可直接更換
 
 ### v1.0.0（2026-10-22）
 

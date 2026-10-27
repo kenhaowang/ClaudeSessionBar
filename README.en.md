@@ -42,7 +42,7 @@ A menu bar dashboard for Claude Code sessions on macOS: it lists every open sess
 4. Click the menu bar icon:
    - The first time you click a session, macOS asks whether the app may control iTerm2 — click "Allow"
    - Turn on "Launch at Login" at the bottom if you like
-   - Right-click ＋ and pick "Choose Folder…" to set where new sessions start
+   - Click ＋ → "Working directory: … (Change…)" at the bottom to set where new sessions start
 
 ## Update
 
@@ -74,7 +74,14 @@ A manually set state goes back to automatic the next time you send that session 
 
 ## New session
 
-The blue ＋ in the header opens a new tab in iTerm2's current window and runs `claude` in a folder of your choice. It defaults to your home directory; right-click ＋ and pick "Choose Folder…" to change it.
+＋ in the header opens a menu; each choice opens a new tab in iTerm2's current window and runs `claude` in the working directory:
+
+- "Just Open a New Tab": the session isn't put in any group
+- "Put the new session in:" lists your groups; pick one and the new session lands there
+- "New Folder…": name a new group, which is created with the new session in it
+- "Working directory: <folder> (Change…)": change where new sessions start (your home directory by default; right-click ＋ → "Choose Folder…" works too)
+
+New sessions start with `claude --session-id <pre-generated id>`, so they show up in the chosen group right away.
 
 ## Restoring sessions after a restart
 
@@ -133,7 +140,12 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.0.0** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.1 (2026-10-27)
+
+- ＋ is now a menu: open a plain new tab, pick the group the new session goes into, or create a new folder for it on the spot
+- The working directory is shown at the bottom of the ＋ menu and can be changed from there
 
 ### v1.0.0 (2026-10-22)
 
