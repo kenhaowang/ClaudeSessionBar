@@ -63,6 +63,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        // CSB_APPEARANCE=light|dark renders README screenshots in either mode.
+        switch ProcessInfo.processInfo.environment["CSB_APPEARANCE"] {
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        default: break
+        }
         let store = Store.shared
         if SelfTest.outputDir != nil {
             store.autoSummarize = false
@@ -98,6 +104,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateStatusButton()
 
         SelfTest.scheduleIfRequested { [weak self] in self?.showPopover() }
+        let args = CommandLine.arguments
+        if let index = args.firstIndex(of: "--screenshot"), index + 1 < args.count { captureScreen(to: args[index + 1]) }
+    }
+
+    /// --screenshot <png>: opens the popover and captures it together with the status item as shown
+    /// on screen, then quits. Without Screen Recording permission (for the terminal that launched
+    /// it) the app draws its own windows onto a plain menu bar strip instead.
+    private func captureScreen(to path: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self else { return }
+            let backdrop = Screenshot.wallpaperBackdrop(for: self.statusItem.button?.window?.screen)
+            showPopover()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                defer {
+                    backdrop?.close()
+                    NSApp.terminate(nil)
+                }
+                func screenFrame(_ view: NSView) -> NSRect? {
+                    view.window?.convertToScreen(view.convert(view.bounds, to: nil))
+                }
+                guard let button = self.statusItem.button, let itemFrame = screenFrame(button),
+                    let content = self.popover.contentViewController?.view, let contentFrame = screenFrame(content),
+                    let main = NSScreen.screens.first
+                else { return }
+                var area = itemFrame.union(contentFrame).insetBy(dx: -16, dy: -24)
+                area.size.height = itemFrame.maxY - area.minY
+                // screencapture counts y downwards from the top of the main display.
+                let rect = [area.minX, main.frame.maxY - area.maxY, area.width, area.height].map { String(Int($0)) }
+                try? FileManager.default.removeItem(atPath: path)
+                _ = Shell.run("/usr/sbin/screencapture", ["-x", "-R", rect.joined(separator: ","), path])
+                if FileManager.default.fileExists(atPath: path) {
+                    print("screenshot: \(path)")
+                    return
+                }
+                let ok = Screenshot.write(
+                    to: path, button: button, buttonFrame: itemFrame, content: content, contentFrame: contentFrame)
+                print(ok ? "screenshot (rendered): \(path)" : "screenshot: failed")
+            }
+        }
     }
 
     private func updateStatusButton() {
@@ -129,7 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Store.shared.refresh()
         // Ask before activating: iTerm's current window is the one the user just left.
-        Store.shared.activeTTY = ITerm.frontSessionTTY()
+        Store.shared.activeTTY = Demo.enabled ? Demo.activeTTY : ITerm.frontSessionTTY()
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()

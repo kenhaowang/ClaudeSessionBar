@@ -38,7 +38,7 @@ final class Store: ObservableObject {
     /// CSB_ACCENT lets tests render a colour without touching the saved choice.
     @Published var accent: AccentTheme =
         AccentTheme(rawValue: ProcessInfo.processInfo.environment["CSB_ACCENT"] ?? "")
-        ?? AccentTheme(rawValue: UserDefaults.standard.string(forKey: "accent") ?? "") ?? .blue
+        ?? (Demo.enabled ? .blue : AccentTheme(rawValue: UserDefaults.standard.string(forKey: "accent") ?? "")) ?? .blue
     {
         didSet { UserDefaults.standard.set(accent.rawValue, forKey: "accent") }
     }
@@ -113,6 +113,16 @@ final class Store: ObservableObject {
     }
 
     func loadPersisted() {
+        if Demo.enabled {
+            autoSummarize = false
+            autoFetchPRs = false
+            trackOpenSessions = false
+            hooksInstalled = true
+            summaries = Demo.summaries()
+            groupData = Demo.groups()
+            prStatuses = Demo.prStatuses()
+            return
+        }
         if restoreTracker == nil { restoreTracker = RestoreTracker() }
         restorePending = restoreTracker?.pending
         names = JSONFile.read([String: String].self, from: Paths.names) ?? [:]
@@ -123,6 +133,10 @@ final class Store: ObservableObject {
     }
 
     func refresh() {
+        if Demo.enabled {
+            apply(Demo.sessions())
+            return
+        }
         guard !scanning else {
             // A change landed mid-scan; scan once more afterwards so it is not lost.
             refreshPending = true
@@ -145,6 +159,10 @@ final class Store: ObservableObject {
     }
 
     func refreshSync() {
+        if Demo.enabled {
+            apply(Demo.sessions())
+            return
+        }
         apply(scanQueue.sync { scanner.scan() })
     }
 
