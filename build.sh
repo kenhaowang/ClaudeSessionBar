@@ -5,14 +5,16 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 swift build -c release
+# Newer SwiftPM (the swiftbuild backend) puts products somewhere other than .build/release.
+BIN="$(swift build -c release --show-bin-path)"
 APP="build/ClaudeSessionBar.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
-cp .build/release/ClaudeSessionBar "$APP/Contents/MacOS/"
+cp "$BIN/ClaudeSessionBar" "$APP/Contents/MacOS/"
 cp Resources/Info.plist "$APP/Contents/"
 mkdir -p "$APP/Contents/Resources"
 # The icon is drawn by the app itself (AppIconRenderer), so no image asset is checked in.
-.build/release/ClaudeSessionBar --make-icon "$APP/Contents/Resources/AppIcon.icns"
+"$BIN/ClaudeSessionBar" --make-icon "$APP/Contents/Resources/AppIcon.icns"
 codesign --force --sign - "$APP"
 echo "built $APP"
 
