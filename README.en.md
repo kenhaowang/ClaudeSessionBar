@@ -36,7 +36,7 @@ A menu bar dashboard for Claude Code sessions on macOS: it lists every open sess
 3. Install the Claude Code hooks (they tell the app which session is waiting for a permission and which just finished):
 
    ```bash
-   /usr/bin/python3 install_hooks.py    # writes ~/.claude/settings.json, backing up any existing file first
+   python3 install_hooks.py    # writes ~/.claude/settings.json, backing up any existing file first
    ```
 
    Claude Code reads hooks when a session starts, so sessions that are already open need a restart to pick them up.
@@ -52,7 +52,7 @@ A menu bar dashboard for Claude Code sessions on macOS: it lists every open sess
 cd ClaudeSessionBar
 git pull
 ./build.sh install                       # quits the running copy and launches the new one
-/usr/bin/python3 install_hooks.py        # only needed when the hooks changed; safe to re-run
+python3 install_hooks.py        # only needed when the hooks changed; safe to re-run
 ```
 
 ## Uninstall
