@@ -1,6 +1,11 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// In the macOS 27 SDK `@State` resolves to a SwiftUI macro whose plugin ships only with Xcode, so
+/// building with just the Command Line Tools fails. Naming the property wrapper through an alias
+/// bypasses the macro and works with every SDK.
+typealias ViewState = SwiftUI.State
+
 extension WorkState {
     var color: Color {
         switch self {
@@ -39,7 +44,7 @@ private struct ContentHeightKey: PreferenceKey {
 
 struct PopoverView: View {
     @ObservedObject var store: Store
-    @State private var contentHeight: CGFloat = 0
+    @ViewState private var contentHeight: CGFloat = 0
 
     /// A ScrollView has no intrinsic height, so a self-sizing popover would collapse it to nothing.
     /// Size it to the measured content instead, capped so long lists scroll.
@@ -230,7 +235,7 @@ struct FlowLayout: Layout {
 /// The group tabs under the title: 全部 / 未分組 / user groups / ＋.
 struct GroupBar: View {
     @ObservedObject var store: Store
-    @State private var plusDropSide: DropSide?
+    @ViewState private var plusDropSide: DropSide?
 
     private var selectedGroup: SessionGroup? {
         guard case .group(let id) = store.filter else { return nil }
@@ -305,9 +310,9 @@ struct GroupMenuItems: View {
 struct GroupChip: View {
     let tab: GroupFilter
     @ObservedObject var store: Store
-    @State private var dropSide: DropSide?
-    @State private var width: CGFloat = 0
-    @State private var draftName = ""
+    @ViewState private var dropSide: DropSide?
+    @ViewState private var width: CGFloat = 0
+    @ViewState private var draftName = ""
     @FocusState private var nameFocused: Bool
 
     /// Tabs and session rows both drag plain strings; a tab's payload carries this prefix so a
@@ -443,7 +448,7 @@ struct GroupChip: View {
 
 struct NewGroupChipField: View {
     @ObservedObject var store: Store
-    @State private var name = ""
+    @ViewState private var name = ""
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -473,7 +478,7 @@ struct NewGroupChipField: View {
 struct NewGroupField: View {
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
-    @State private var name = ""
+    @ViewState private var name = ""
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -495,8 +500,8 @@ struct SessionRowView: View {
     @ObservedObject var store: Store
     /// In the "全部" tab each row says which group it belongs to.
     var showGroup = false
-    @State private var hovering = false
-    @State private var draftName = ""
+    @ViewState private var hovering = false
+    @ViewState private var draftName = ""
     @FocusState private var nameFocused: Bool
 
     private var isRenaming: Bool { store.renamingId == row.id }
@@ -906,7 +911,7 @@ struct PRLine: View {
 struct RestoreBanner: View {
     let pending: RestorePending
     @ObservedObject var store: Store
-    @State private var expanded = true
+    @ViewState private var expanded = true
 
     private var title: String {
         let count = pending.sessions.count
