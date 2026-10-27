@@ -52,13 +52,13 @@
 cd ClaudeSessionBar
 git pull
 ./build.sh install                       # 會先關掉舊的再啟動新的
-/usr/bin/python3 install_hooks.py        # hooks 有更新時才需要；重跑不會重複寫入
+python3 install_hooks.py        # hooks 有更新時才需要；重跑不會重複寫入
 ```
 
 ## 移除
 
 ```bash
-/usr/bin/python3 install_hooks.py --uninstall
+python3 install_hooks.py --uninstall
 rm -rf ~/Applications/ClaudeSessionBar.app ~/.claude/session-dashboard
 ```
 
