@@ -25,6 +25,6 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>用來切換、改名或關閉 Claude session 所在的 iTerm 分頁。</string>
+    <string>用來開啟、切換、改名或關閉 Claude session 所在的 iTerm2／Ghostty 分頁。</string>
 </dict>
 </plist>

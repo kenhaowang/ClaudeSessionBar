@@ -146,14 +146,14 @@ struct PopoverView: View {
                 .help(tr("在 \((store.newSessionDirectory as NSString).abbreviatingWithTildeInPath) 開新的 Claude session，可選要放進哪個群組",
                          "Start a new Claude session in \((store.newSessionDirectory as NSString).abbreviatingWithTildeInPath) and pick its group"))
                 Button {
-                    store.language = store.language == .zh ? .en : .zh
+                    store.showSettingsMenu()
                 } label: {
-                    Image(systemName: "globe")
+                    Image(systemName: "gearshape")
                         .font(.system(size: 15))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.borderless)
-                .help(tr("切換成英文", "Switch to Chinese"))
+                .help(tr("設定：終端機、語言", "Settings: terminal, language"))
             }
         }
         .padding(.horizontal, 12)

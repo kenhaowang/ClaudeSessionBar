@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import Foundation
 import ServiceManagement
 
@@ -268,7 +269,10 @@ final class Store: ObservableObject {
     func reopen(_ sessions: [RestorableSession]) {
         guard !sessions.isEmpty else { return }
         closePopover?()
-        ITerm.openTabs(running: sessions.map { "cd " + ITerm.shellQuote($0.cwd) + " && claude --resume " + $0.sessionId })
+        Terminals.openTabs(running: sessions.map { "cd " + Terminals.shellQuote($0.cwd) + " && claude --resume " + $0.sessionId }) {
+            [weak self] ok, terminal in
+            if !ok { self?.flashOpenFailed(terminal) }
+        }
         restoreTracker?.remove(Set(sessions.map(\.sessionId)))
         restorePending = restoreTracker?.pending
     }
@@ -622,7 +626,7 @@ final class Store: ObservableObject {
 
     // MARK: - Actions
 
-    /// Set by AppDelegate; the popover must be gone before iTerm takes focus.
+    /// Set by AppDelegate; the popover must be gone before the terminal takes focus.
     var closePopover: (() -> Void)?
 
     func jump(_ row: SessionRow) {
@@ -634,22 +638,24 @@ final class Store: ObservableObject {
         closePopover?()
         let fallback = { [weak self] in
             if row.isBackground, let jobId = row.jobId {
-                ITerm.openAttach(jobId: jobId)
+                Terminals.openTabs(running: ["claude attach " + Terminals.shellQuote(jobId)]) { ok, terminal in
+                    if !ok { self?.flashOpenFailed(terminal) }
+                }
             } else {
-                self?.flash(tr("找不到這個 session 所在的 iTerm 分頁", "Couldn't find this session's iTerm tab"))
+                self?.flash(tr("找不到這個 session 所在的終端機分頁", "Couldn't find this session's terminal tab"))
             }
         }
         guard let tty = row.tty else {
             fallback()
             return
         }
-        ITerm.focus(tty: tty) { found in
+        Terminals.focus(tty: tty, cwd: row.cwd) { found in
             if !found { fallback() }
         }
     }
 
     @Published var worktreeProposal: WorktreeProposal?
-    /// tty of the iTerm tab the user was last working in, read when the popover opens.
+    /// tty of the terminal tab the user was last working in, read when the popover opens.
     @Published var activeTTY: String?
 
     /// Opens the worktree that has the session's branch checked out in Cursor, or asks (inline in
@@ -702,7 +708,18 @@ final class Store: ObservableObject {
     /// `groupId` before it even shows up (nil leaves it in 未分組).
     func openNewSession(groupId: String? = nil) {
         closePopover?()
-        ITerm.openNewSession(command: prepareNewSession(groupId: groupId).command)
+        Terminals.openTabs(running: [prepareNewSession(groupId: groupId).command]) { [weak self] ok, terminal in
+            if !ok { self?.flashOpenFailed(terminal) }
+        }
+    }
+
+    private func flashOpenFailed(_ terminal: TerminalApp) {
+        flash(
+            terminal == .ghostty
+                ? tr("無法在 Ghostty 開新分頁（需要 Ghostty 1.3 以上，並允許控制 Ghostty）",
+                     "Couldn't open a Ghostty tab (needs Ghostty 1.3 or later, and permission to control it)")
+                : tr("無法在 iTerm2 開新分頁（請確認已允許控制 iTerm2）",
+                     "Couldn't open an iTerm2 tab (check that the app may control iTerm2)"))
     }
 
     func prepareNewSession(groupId: String?) -> (sessionId: String, command: String) {
@@ -711,12 +728,52 @@ final class Store: ObservableObject {
             groupData.assignments[sessionId] = groupId
             saveGroups()
         }
-        let command = "cd " + ITerm.shellQuote(newSessionDirectory) + " && claude --session-id " + sessionId
+        let command = "cd " + Terminals.shellQuote(newSessionDirectory) + " && claude --session-id " + sessionId
         return (sessionId, command)
     }
 
     /// The ＋ button's menu: which group the new session goes into, or none, plus the folder it
     /// starts in. A native menu keeps the button's two-colour symbol (SwiftUI's Menu would not).
+    /// The gear button's menu: the terminal new tabs open in, and the interface language.
+    func showSettingsMenu() {
+        let menu = NSMenu()
+        let terminal = Terminals.preferred.name
+        menu.addItem(ClosureMenuItem(title: tr("終端機：\(terminal)（更換…）", "Terminal: \(terminal) (Change…)")) {
+            [weak self] in self?.chooseTerminal()
+        })
+        menu.addItem(.separator())
+        let header = NSMenuItem(title: tr("語言", "Language"), action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        for (lang, title) in [(AppLanguage.zh, "繁體中文"), (.en, "English")] {
+            let item = ClosureMenuItem(title: title) { [weak self] in self?.language = lang }
+            item.state = language == lang ? .on : .off
+            menu.addItem(item)
+        }
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
+
+    func chooseTerminal() {
+        closePopover?()
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.message = tr("選擇開新分頁要用的終端機（支援 iTerm2、Ghostty）", "Choose the terminal for new tabs (iTerm2 or Ghostty)")
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        if let terminal = TerminalApp(bundleId: Bundle(url: url)?.bundleIdentifier) {
+            Terminals.choice = terminal
+            flash(tr("開新分頁會用 ", "New tabs will open in ") + terminal.name)
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = tr("不支援 \(url.deletingPathExtension().lastPathComponent)", "\(url.deletingPathExtension().lastPathComponent) isn't supported")
+        alert.informativeText = tr("目前只支援 iTerm2 和 Ghostty（1.3 以上）。", "Only iTerm2 and Ghostty (1.3 or later) are supported for now.")
+        alert.runModal()
+    }
+
     func showNewSessionMenu() {
         let menu = NSMenu()
         menu.addItem(ClosureMenuItem(title: tr("直接開新分頁", "Just Open a New Tab")) { [weak self] in self?.openNewSession() })
@@ -779,7 +836,7 @@ final class Store: ObservableObject {
         names[row.id] = trimmed.nilIfEmpty
         JSONFile.write(names, to: Paths.names)
         renamingId = nil
-        if let tty = row.tty, !trimmed.isEmpty { ITerm.setName(tty: tty, name: trimmed) }
+        if let tty = row.tty, !trimmed.isEmpty { Terminals.setName(tty: tty, name: trimmed) }
         apply(raws)
     }
 
@@ -811,7 +868,7 @@ final class Store: ObservableObject {
             kill(pid_t(row.pid), SIGTERM)
         }
         if closeTab, let tty = row.tty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { ITerm.closeSession(tty: tty) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { Terminals.closeSession(tty: tty) }
         }
         flash(tr("已結束：", "Ended: ") + row.displayName)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.refresh() }

@@ -33,6 +33,7 @@ enum Entry {
         }
         if args.contains("--check-worktree") { exit(SelfTest.checkWorktree() ? 0 : 1) }
         if args.contains("--check-pr") { exit(SelfTest.checkPR() ? 0 : 1) }
+        if args.contains("--check-terminals") { exit(Terminals.check() ? 0 : 1) }
         if args.contains("--check-restore") { exit(SelfTest.checkRestore() ? 0 : 1) }
         if args.contains("--dump") || args.contains("--snapshot") || args.contains("--check-groups")
             || args.contains("--worktree-plan")
@@ -78,6 +79,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.start()
         // Logout, restart and shutdown (including forced macOS updates) announce themselves here,
         // before iTerm quits and takes the sessions down one by one.
+        // ＋ opens tabs in whichever terminal (iTerm2 or Ghostty) the user was using last.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { note in
+            Terminals.noteActivated(note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)
+        }
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.willPowerOffNotification, object: nil, queue: .main
         ) { _ in Store.shared.freezeOpenSessions() }
@@ -173,8 +180,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         Store.shared.refresh()
-        // Ask before activating: iTerm's current window is the one the user just left.
-        Store.shared.activeTTY = Demo.enabled ? Demo.activeTTY : ITerm.frontSessionTTY()
+        // Ask before activating: the terminal's current tab is the one the user just left.
+        Store.shared.activeTTY = Demo.enabled ? Demo.activeTTY : Terminals.frontSessionTTY()
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
