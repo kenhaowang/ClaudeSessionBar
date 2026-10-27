@@ -146,7 +146,13 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.1.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.1.1（2026-10-27）
+
+- 修正只裝 Command Line Tools、使用 macOS 27 SDK 時編譯失敗的問題
+- 修正新版 SwiftPM（Swift 6.4 起預設的 swiftbuild 後端）下 `build.sh` 找不到編譯結果的問題
+- README 加上截圖
 
 ### v1.1（2026-10-27）
 

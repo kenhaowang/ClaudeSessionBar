@@ -147,7 +147,13 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.1.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.1.1 (2026-10-27)
+
+- Fix the build with only the Command Line Tools and the macOS 27 SDK
+- Fix `build.sh` not finding the binary with newer SwiftPM (the swiftbuild backend, default from Swift 6.4)
+- Screenshots in the README
 
 ### v1.1 (2026-10-27)
 
