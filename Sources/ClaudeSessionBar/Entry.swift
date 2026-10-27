@@ -180,6 +180,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         Store.shared.refresh()
+        Store.shared.refreshInstalledApps()
         // Ask before activating: the terminal's current tab is the one the user just left.
         Store.shared.activeTTY = Demo.enabled ? Demo.activeTTY : Terminals.frontSessionTTY()
         NSApp.activate(ignoringOtherApps: true)

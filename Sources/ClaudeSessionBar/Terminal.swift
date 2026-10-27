@@ -57,6 +57,7 @@ enum Terminals {
     /// --check-terminals: compiles (never runs) every script against the installed terminals.
     static func check() -> Bool {
         print("preferred: \(preferred.name)")
+        print("editors: \(Editor.installed.map(\.name).joined(separator: ", "))")
         var ok = true
         for terminal in TerminalApp.allCases {
             guard terminal.isInstalled else {

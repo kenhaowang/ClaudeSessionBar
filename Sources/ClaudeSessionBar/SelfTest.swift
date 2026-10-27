@@ -44,7 +44,8 @@ enum SelfTest {
             {
                 Store.shared.worktreeProposal = WorktreeProposal(
                     sessionId: row.id, branch: branch, mainRoot: Store.shared.newSessionDirectory,
-                    path: Worktree.suggestedPath(mainRoot: Store.shared.newSessionDirectory, branch: branch))
+                    path: Worktree.suggestedPath(mainRoot: Store.shared.newSessionDirectory, branch: branch),
+                    editor: Store.shared.editors.first ?? .cursor)
             }
             print("selftest: windows after open: \(NSApp.windows.map { "\(type(of: $0)) visible=\($0.isVisible)" })")
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -181,7 +182,7 @@ enum SelfTest {
         return failures == 0
     }
 
-    /// `--worktree-plan`: read-only; what "在 Cursor 開啟" would do for each live session.
+    /// `--worktree-plan`: read-only; what "在 <editor> 開啟" would do for each live session.
     static func printWorktreePlan(_ store: Store) {
         var cache: [String: [Worktree.Entry]] = [:]
         for row in store.sortedRows {

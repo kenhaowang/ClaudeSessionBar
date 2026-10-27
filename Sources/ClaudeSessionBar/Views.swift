@@ -651,7 +651,7 @@ struct SessionRowView: View {
 
     private func worktreeConfirmation(_ proposal: WorktreeProposal) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(tr("「\(proposal.branch)」還沒有 worktree，要建立在 \(Self.tildePath(proposal.path)) 並用 Cursor 開啟嗎？", "“\(proposal.branch)” has no worktree yet. Create it at \(Self.tildePath(proposal.path)) and open it in Cursor?"))
+            Text(tr("「\(proposal.branch)」還沒有 worktree，要建立在 \(Self.tildePath(proposal.path)) 並用 \(proposal.editor.name) 開啟嗎？", "“\(proposal.branch)” has no worktree yet. Create it at \(Self.tildePath(proposal.path)) and open it in \(proposal.editor.name)?"))
                 .font(.caption)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
@@ -671,7 +671,9 @@ struct SessionRowView: View {
     @ViewBuilder private var menuItems: some View {
         Button(tr("切換到這個 session", "Go to Session")) { store.jump(row) }
         if let branch = row.branch {
-            Button(tr("在 Cursor 開啟 \(branch)", "Open \(branch) in Cursor")) { store.openInCursor(row) }
+            ForEach(store.editors) { editor in
+                Button(tr("在 \(editor.name) 開啟 \(branch)", "Open \(branch) in \(editor.name)")) { store.open(row, in: editor) }
+            }
         }
         Button(tr("改名…", "Rename…")) { store.renamingId = row.id }
         if row.hasCustomName { Button(tr("恢復自動名稱", "Restore Automatic Name")) { store.rename(row, to: "") } }

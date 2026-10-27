@@ -655,12 +655,20 @@ final class Store: ObservableObject {
     }
 
     @Published var worktreeProposal: WorktreeProposal?
+    /// Installed editors, offered in each row's menu; re-read whenever the popover opens.
+    @Published private(set) var editors: [Editor] = Editor.installed
+
+    func refreshInstalledApps() {
+        let found = Editor.installed
+        if found != editors { editors = found }
+    }
+
     /// tty of the terminal tab the user was last working in, read when the popover opens.
     @Published var activeTTY: String?
 
-    /// Opens the worktree that has the session's branch checked out in Cursor, or asks (inline in
-    /// the row) before creating one under .claude/worktrees.
-    func openInCursor(_ row: SessionRow) {
+    /// Opens the worktree that has the session's branch checked out in `editor`, or asks (inline
+    /// in the row) before creating one under .claude/worktrees.
+    func open(_ row: SessionRow, in editor: Editor) {
         guard let branch = row.branch else {
             flash(tr("這個 session 沒有分支資訊", "This session has no branch"))
             return
@@ -675,13 +683,13 @@ final class Store: ObservableObject {
                     return
                 }
                 if let existing = entries.first(where: { $0.branch == branch }) {
-                    Log.jump.notice("cursor open existing \(existing.path, privacy: .public)")
-                    if !Worktree.openInCursor(existing.path) { self.flash(tr("無法開啟 Cursor", "Couldn't open Cursor")) }
+                    Log.jump.notice("\(editor.name, privacy: .public) open existing \(existing.path, privacy: .public)")
+                    if !editor.open(existing.path) { self.flash(tr("無法開啟 ", "Couldn't open ") + editor.name) }
                     return
                 }
                 self.worktreeProposal = WorktreeProposal(
                     sessionId: row.id, branch: branch, mainRoot: main.path,
-                    path: Worktree.suggestedPath(mainRoot: main.path, branch: branch))
+                    path: Worktree.suggestedPath(mainRoot: main.path, branch: branch), editor: editor)
             }
         }
     }
@@ -698,8 +706,10 @@ final class Store: ObservableObject {
                     self.flash(tr("建立 worktree 失敗：", "Creating the worktree failed: ") + error)
                     return
                 }
-                Log.jump.notice("cursor open new worktree \(proposal.path, privacy: .public)")
-                if !Worktree.openInCursor(proposal.path) { self.flash(tr("worktree 已建立，但無法開啟 Cursor", "Worktree created, but Cursor couldn't be opened")) }
+                Log.jump.notice("\(proposal.editor.name, privacy: .public) open new worktree \(proposal.path, privacy: .public)")
+                if !proposal.editor.open(proposal.path) {
+                    self.flash(tr("worktree 已建立，但無法開啟 ", "Worktree created, but couldn't open ") + proposal.editor.name)
+                }
             }
         }
     }

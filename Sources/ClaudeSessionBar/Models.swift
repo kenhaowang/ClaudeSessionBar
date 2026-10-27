@@ -125,6 +125,7 @@ struct WorktreeProposal: Equatable {
     let branch: String
     let mainRoot: String
     let path: String
+    let editor: Editor
 }
 
 enum DragKind: Equatable {

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Finds (or creates) the git worktree that has a branch checked out, and opens it in Cursor.
+/// Finds (or creates) the git worktree that has a branch checked out.
 enum Worktree {
     struct Entry: Equatable {
         let path: String
@@ -49,15 +49,5 @@ enum Worktree {
         guard out.status != 0 else { return nil }
         let message = out.stdout.split(separator: "\n").last { $0.hasPrefix("fatal:") || $0.hasPrefix("error:") }
         return String(message ?? out.stdout.split(separator: "\n").last ?? Substring(tr("git worktree add 失敗", "git worktree add failed")))
-    }
-
-    static func openInCursor(_ path: String) -> Bool {
-        let cli = "\(Paths.home.path)/.local/bin/cursor"
-        if FileManager.default.isExecutableFile(atPath: cli),
-            Shell.run(cli, [path], env: ClaudeCLI.environment, timeout: 20)?.status == 0
-        {
-            return true
-        }
-        return Shell.run("/usr/bin/open", ["-a", "Cursor", path])?.status == 0
     }
 }
