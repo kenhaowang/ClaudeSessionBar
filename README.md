@@ -161,7 +161,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.2**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.2.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.2.1（2026-11-02）
+
+- 一些小調整
 
 ### v1.2（2026-11-02）
 

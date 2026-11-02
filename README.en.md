@@ -162,7 +162,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.2** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.2.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.2.1 (2026-11-02)
+
+- Minor tweaks
 
 ### v1.2 (2026-11-02)
 
