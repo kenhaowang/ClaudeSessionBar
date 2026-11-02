@@ -288,6 +288,8 @@ struct SessionRow: Identifiable, Equatable {
     let cwd: String
     let branch: String?
     let displayName: String
+    /// Claude Code's own title for the session, which it also puts in the terminal tab title.
+    let title: String?
     let hasCustomName: Bool
     let state: WorkState
     let isManual: Bool

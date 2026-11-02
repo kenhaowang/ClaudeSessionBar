@@ -73,6 +73,25 @@ enum Terminals {
                 ok = ok && compiled
             }
         }
+        let tabs = [
+            Ghostty.Surface(id: "a", title: "✳ Fix the report", directory: "/repo"),
+            Ghostty.Surface(id: "b", title: "⠂ Review #120", directory: "/repo"),
+            Ghostty.Surface(id: "c", title: "✳ Review #120", directory: "/other/"),
+            Ghostty.Surface(id: "d", title: "zsh", directory: "/solo"),
+        ]
+        let cases: [(String?, String, String?, String)] = [
+            ("Fix the report", "/repo", "a", "title alone"),
+            ("Review #120", "/repo", "b", "same title, told apart by directory"),
+            ("Review #120", "/other", "c", "directory with a trailing slash"),
+            ("Unknown", "/solo", "d", "no title match, alone in its directory"),
+            ("Unknown", "/repo", nil, "no title match, directory shared"),
+            (nil, "/repo", nil, "no title, directory shared"),
+        ]
+        for (title, cwd, expected, label) in cases {
+            let got = Ghostty.match(tabs, title: title, cwd: cwd)
+            print((got == expected ? "PASS " : "FAIL ") + "Ghostty match: \(label) -> \(got ?? "none")")
+            ok = ok && got == expected
+        }
         let saved = choice
         defer { choice = saved }
         for terminal in TerminalApp.allCases {
@@ -105,13 +124,13 @@ enum Terminals {
         }
     }
 
-    /// Finds the session by tty (Ghostty versions without a `tty` property fall back to a terminal
-    /// that is alone in the session's directory) and brings its tab to the front.
-    static func focus(tty: String, cwd: String, completion: @escaping (Bool) -> Void) {
+    /// Finds the session by tty (Ghostty versions without a `tty` property fall back to the tab
+    /// title Claude Code sets, then to the session's directory) and brings its tab to the front.
+    static func focus(tty: String, cwd: String, title: String?, completion: @escaping (Bool) -> Void) {
         let running = ([preferred] + TerminalApp.allCases).filter(\.isRunning)
         if running.contains(.iterm), ITerm.contains(tty: tty) {
             activate(.iterm) { completion(ITerm.select(tty: tty)) }
-        } else if running.contains(.ghostty), let id = Ghostty.terminalId(tty: tty, cwd: cwd) {
+        } else if running.contains(.ghostty), let id = Ghostty.terminalId(tty: tty, cwd: cwd, title: title) {
             activate(.ghostty) { completion(Ghostty.focus(id: id)) }
         } else {
             completion(false)
@@ -275,30 +294,68 @@ enum Ghostty {
         return sdef.contains("code=\"Gtty\"")
     }
 
-    static func terminalId(tty: String, cwd: String) -> String? {
+    static func terminalId(tty: String, cwd: String, title: String?) -> String? {
         if supportsTTY { return terminalId(tty: tty) }
-        let dir = cwd.hasSuffix("/") ? String(cwd.dropLast()) : cwd
-        let id = AppleScript.run(cwdLookupScript(dir: dir))
-        return id?.nilIfEmpty
+        return match(surfaces(), title: title, cwd: cwd)
+    }
+
+    struct Surface: Equatable {
+        let id: String
+        let title: String
+        let directory: String
+    }
+
+    private static func surfaces() -> [Surface] {
+        let out = AppleScript.run(listScript) ?? ""
+        return out.split(separator: "\n").compactMap { line in
+            let fields = line.split(separator: "\t", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
+            guard fields.count == 3 else { return nil }
+            return Surface(id: fields[0], title: fields[1], directory: fields[2])
+        }
+    }
+
+    /// Claude Code titles its tab "<spinner> <session title>", e.g. "✳ Fix the daily report".
+    /// A title shared by several tabs is narrowed down by directory; failing that, a tab that is
+    /// alone in the session's directory is taken.
+    static func match(_ surfaces: [Surface], title: String?, cwd: String) -> String? {
+        func trimmed(_ path: String) -> String { path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path }
+        let dir = trimmed(cwd)
+        let inDir = surfaces.filter { trimmed($0.directory) == dir }
+        if let title {
+            let titled = surfaces.filter { sessionTitle(fromTab: $0.title) == title }
+            if titled.count == 1 { return titled[0].id }
+            let both = titled.filter { inDir.contains($0) }
+            if both.count == 1 { return both[0].id }
+        }
+        return inDir.count == 1 ? inDir[0].id : nil
+    }
+
+    static func sessionTitle(fromTab tab: String) -> String {
+        let text = tab.trimmingCharacters(in: .whitespaces)
+        guard let first = text.unicodeScalars.first, !CharacterSet.alphanumerics.contains(first),
+            let space = text.firstIndex(of: " ")
+        else { return text }
+        return text[space...].trimmingCharacters(in: .whitespaces)
     }
 
     private static func terminalId(tty: String) -> String? {
         AppleScript.run(ttyLookupScript(tty: tty))?.nilIfEmpty
     }
 
-    private static func cwdLookupScript(dir: String) -> String {
-        """
+    /// One line per terminal: id, title and working directory, tab-separated.
+    private static let listScript = """
         \(tell)
-            set found to {}
+            set out to ""
             repeat with t in terminals
+                set n to name of t
+                if n is missing value then set n to ""
                 set d to working directory of t
-                if d is \(AppleScript.quote(dir)) or d is \(AppleScript.quote(dir + "/")) then set end of found to id of t
+                if d is missing value then set d to ""
+                set out to out & (id of t) & tab & n & tab & d & linefeed
             end repeat
         end tell
-        if (count of found) is 1 then return item 1 of found
-        return ""
+        return out
         """
-    }
 
     private static func ttyLookupScript(tty: String) -> String {
         """
@@ -316,7 +373,7 @@ enum Ghostty {
     /// Every script this app sends, for compiling against the installed Ghostty (--check-terminals).
     static var allScripts: [(String, String)] {
         var scripts = [
-            ("cwd lookup", cwdLookupScript(dir: "/tmp")), ("focus", onTerminal(id: "x", "focus t")),
+            ("list", listScript), ("focus", onTerminal(id: "x", "focus t")),
             ("open 1 tab", openTabsScript(["true"])), ("open 2 tabs", openTabsScript(["true", "true"])),
         ]
         if supportsTTY {

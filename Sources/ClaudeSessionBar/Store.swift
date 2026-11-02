@@ -230,6 +230,7 @@ final class Store: ObservableObject {
             cwd: transcript?.cwd ?? agent.cwd,
             branch: transcript?.gitBranch,
             displayName: currentName(raw),
+            title: transcript?.aiTitle,
             hasCustomName: names[sid] != nil,
             state: state,
             isManual: manual,
@@ -649,7 +650,7 @@ final class Store: ObservableObject {
             fallback()
             return
         }
-        Terminals.focus(tty: tty, cwd: row.cwd) { found in
+        Terminals.focus(tty: tty, cwd: row.cwd, title: row.title) { found in
             if !found { fallback() }
         }
     }
