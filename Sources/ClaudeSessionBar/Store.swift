@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 import Foundation
 import ServiceManagement
@@ -42,6 +43,45 @@ final class Store: ObservableObject {
         ?? (Demo.enabled ? .blue : AccentTheme(rawValue: UserDefaults.standard.string(forKey: "accent") ?? "")) ?? .blue
     {
         didSet { UserDefaults.standard.set(accent.rawValue, forKey: "accent") }
+    }
+
+    /// A colour picked in the palette ("#RRGGBB"); while set it replaces the preset `accent`.
+    @Published var customAccent: String? = Demo.enabled ? nil : UserDefaults.standard.string(forKey: "customAccent") {
+        didSet { UserDefaults.standard.set(customAccent, forKey: "customAccent") }
+    }
+
+    @Published var savedAccents: [String] = UserDefaults.standard.stringArray(forKey: "savedAccents") ?? [] {
+        didSet { UserDefaults.standard.set(savedAccents, forKey: "savedAccents") }
+    }
+
+    var accentColor: Color {
+        customAccent.flatMap(HexColor.nsColor).map(Color.init(nsColor:)) ?? accent.color
+    }
+
+    var accentOnColor: Color {
+        guard let customAccent else { return accent.onColor }
+        return HexColor.isLight(customAccent) ? AccentTheme.yellow.onColor : .white
+    }
+
+    private var titleTaps = TapBurst()
+    @Published var paletteOpen = false
+
+    /// Each tap moves to the next preset colour; 19 taps within 6 seconds open the palette.
+    func tapTitle() {
+        if customAccent != nil {
+            customAccent = nil
+        } else {
+            accent = accent.next
+        }
+        if titleTaps.register() { paletteOpen = true }
+    }
+
+    static let maxSavedAccents = 19
+
+    func saveCurrentAccent() {
+        guard let customAccent, !savedAccents.contains(customAccent), savedAccents.count < Self.maxSavedAccents
+        else { return }
+        savedAccents.append(customAccent)
     }
 
     var autoSummarize = true

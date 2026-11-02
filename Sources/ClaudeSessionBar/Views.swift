@@ -58,6 +58,7 @@ struct PopoverView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if store.paletteOpen { PaletteSection(store: store) }
             GroupBar(store: store)
             Divider()
             if store.rows.isEmpty && store.groups.isEmpty && store.restorePending == nil {
@@ -114,7 +115,7 @@ struct PopoverView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text("Claude Sessions").font(.headline).lineLimit(1).fixedSize()
-                    .onTapGesture { store.accent = store.accent.next }
+                    .onTapGesture { store.tapTitle() }
                     .help(tr("點一下換主題色", "Click to change the accent colour"))
                 if Today.isCakeDay { Text(verbatim: "🎂").font(.headline) }
                 Spacer(minLength: 4)
@@ -137,7 +138,7 @@ struct PopoverView: View {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 17))
                         .symbolRenderingMode(.palette)
-                        .foregroundStyle(store.accent.onColor, store.accent.color)
+                        .foregroundStyle(store.accentOnColor, store.accentColor)
                 }
                 .buttonStyle(.borderless)
                 .contextMenu {
@@ -177,7 +178,7 @@ struct PopoverView: View {
             Spacer()
             Toggle(tr("登入時啟動", "Launch at Login"), isOn: Binding(get: { store.launchAtLogin }, set: { store.launchAtLogin = $0 }))
                 .toggleStyle(.checkbox)
-                .tint(store.accent.color)
+                .tint(store.accentColor)
                 .font(.caption)
             Button(tr("結束 App", "Quit")) { NSApp.terminate(nil) }
                 .buttonStyle(.borderless)
@@ -267,7 +268,7 @@ struct GroupBar: View {
                 .buttonStyle(.plain)
                 .help(tr("新增群組；把標籤拖到這裡會移到最後", "New group; drop a tab here to move it to the end"))
                 .overlay(alignment: .leading) {
-                    if store.dragKind != nil && plusDropSide != nil { InsertionBar(color: store.accent.color).offset(x: -4) }
+                    if store.dragKind != nil && plusDropSide != nil { InsertionBar(color: store.accentColor).offset(x: -4) }
                 }
                 .onDrop(of: [.text], delegate: TabDropDelegate(target: nil, store: store, width: 0, side: $plusDropSide))
                 .onChange(of: store.dragKind) { _, kind in
@@ -363,7 +364,7 @@ struct GroupChip: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Capsule().strokeBorder(store.accent.color, lineWidth: 1.5))
+                    .background(Capsule().strokeBorder(store.accentColor, lineWidth: 1.5))
             } else if let group {
                 draggableChip.contextMenu { GroupMenuItems(group: group, store: store) }
             } else {
@@ -379,7 +380,7 @@ struct GroupChip: View {
         )
         .overlay(alignment: dropSide == .after ? .trailing : .leading) {
             if store.dragKind != nil && (dropSide == .before || dropSide == .after) {
-                InsertionBar(color: store.accent.color).offset(x: dropSide == .after ? 4 : -4)
+                InsertionBar(color: store.accentColor).offset(x: dropSide == .after ? 4 : -4)
             }
         }
         .onDrop(of: [.text], delegate: TabDropDelegate(target: tab, store: store, width: width, side: $dropSide))
@@ -400,7 +401,7 @@ struct GroupChip: View {
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Capsule().fill(store.accent.color.opacity(0.85)))
+                .background(Capsule().fill(store.accentColor.opacity(0.85)))
                 .foregroundStyle(.white)
         }
     }
@@ -432,16 +433,16 @@ struct GroupChip: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(Capsule().fill(chipFill))
-        .overlay(Capsule().strokeBorder(isSessionDropTarget ? store.accent.color : Color.clear, lineWidth: 1.5))
-        .foregroundStyle(isSelected ? store.accent.onColor : Color.primary)
+        .overlay(Capsule().strokeBorder(isSessionDropTarget ? store.accentColor : Color.clear, lineWidth: 1.5))
+        .foregroundStyle(isSelected ? store.accentOnColor : Color.primary)
         .contentShape(Capsule())
         .onTapGesture { store.select(filter) }
         .help(group == nil ? tr("拖曳可調整順序", "Drag to reorder") : tr("拖曳可調整順序；右鍵可改名或刪除；把 session 拖到這裡就會歸進這組", "Drag to reorder; right-click to rename or delete; drop a session here to file it"))
     }
 
     private var chipFill: Color {
-        if isSelected { return store.accent.color }
-        if isSessionDropTarget { return store.accent.color.opacity(0.25) }
+        if isSelected { return store.accentColor }
+        if isSessionDropTarget { return store.accentColor.opacity(0.25) }
         return Color.primary.opacity(0.07)
     }
 }
@@ -470,7 +471,7 @@ struct NewGroupChipField: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Capsule().strokeBorder(store.accent.color, lineWidth: 1.5))
+        .background(Capsule().strokeBorder(store.accentColor, lineWidth: 1.5))
         .onAppear { focused = true }
     }
 }
@@ -521,7 +522,7 @@ struct SessionRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 titleLine
                 metaLine
-                if let pr = row.pr { PRLine(pr: pr, status: row.prStatus, accent: store.accent.color) }
+                if let pr = row.pr { PRLine(pr: pr, status: row.prStatus, accent: store.accentColor) }
                 detailLines
                 if isConfirmingClose { closeConfirmation }
                 if let proposal = worktreeProposal { worktreeConfirmation(proposal) }
@@ -545,7 +546,7 @@ struct SessionRowView: View {
         .overlay {
             if isActiveTab {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(store.accent.color, lineWidth: 2)
+                    .strokeBorder(store.accentColor, lineWidth: 2)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
             }
@@ -584,7 +585,7 @@ struct SessionRowView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                 if row.isBackground { Pill(text: tr("背景", "Background"), color: .gray) }
-                if isActiveTab { Pill(text: tr("目前分頁", "Current Tab"), color: store.accent.color) }
+                if isActiveTab { Pill(text: tr("目前分頁", "Current Tab"), color: store.accentColor) }
             }
             Spacer(minLength: 4)
             Text(RelativeTime.text(row.lastSpokeAt))
@@ -603,7 +604,7 @@ struct SessionRowView: View {
                     .labelStyle(.titleAndIcon)
                     .font(.caption2)
                     .lineLimit(1)
-                    .foregroundStyle(store.accent.color)
+                    .foregroundStyle(store.accentColor)
             }
             if let branch = row.branch {
                 Image(systemName: "arrow.triangle.branch")
@@ -929,7 +930,7 @@ struct RestoreBanner: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.counterclockwise.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(store.accent.color)
+                    .foregroundStyle(store.accentColor)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.system(size: 12, weight: .semibold))
                     Text(tr("中斷於 ", "Interrupted ") + Date(timeIntervalSince1970: pending.interruptedAt).formatted(.dateTime.month().day().hour().minute().locale(L10n.locale)))
@@ -944,7 +945,7 @@ struct RestoreBanner: View {
             HStack(spacing: 8) {
                 Button(tr("全部重新開啟", "Reopen All")) { store.reopen(pending.sessions) }
                     .buttonStyle(.borderedProminent)
-                    .tint(store.accent.color)
+                    .tint(store.accentColor)
                 Button(tr("忽略", "Dismiss")) { store.dismissRestore() }
             }
             .controlSize(.small)
@@ -976,7 +977,7 @@ struct RestoreBanner: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(store.accent.color.opacity(0.08))
+        .background(store.accentColor.opacity(0.08))
     }
 }
 
@@ -995,8 +996,8 @@ struct SortSwitch: View {
                     .fixedSize()
                     .padding(.horizontal, 10)
                     .padding(.vertical, 3)
-                    .foregroundStyle(selected ? store.accent.onColor : Color.primary)
-                    .background(RoundedRectangle(cornerRadius: 5).fill(selected ? store.accent.color : Color.clear))
+                    .foregroundStyle(selected ? store.accentOnColor : Color.primary)
+                    .background(RoundedRectangle(cornerRadius: 5).fill(selected ? store.accentColor : Color.clear))
                     .contentShape(Rectangle())
                     .onTapGesture { store.sortMode = mode }
             }

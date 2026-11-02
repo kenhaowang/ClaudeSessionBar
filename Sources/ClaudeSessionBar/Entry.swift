@@ -34,6 +34,7 @@ enum Entry {
         if args.contains("--check-worktree") { exit(SelfTest.checkWorktree() ? 0 : 1) }
         if args.contains("--check-pr") { exit(SelfTest.checkPR() ? 0 : 1) }
         if args.contains("--check-terminals") { exit(Terminals.check() ? 0 : 1) }
+        if args.contains("--check-palette") { exit(PaletteCheck.run() ? 0 : 1) }
         if args.contains("--check-restore") { exit(SelfTest.checkRestore() ? 0 : 1) }
         if args.contains("--dump") || args.contains("--snapshot") || args.contains("--check-groups")
             || args.contains("--worktree-plan")
@@ -181,6 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Store.shared.refresh()
         Store.shared.refreshInstalledApps()
+        Store.shared.paletteOpen = false
         // Ask before activating: the terminal's current tab is the one the user just left.
         Store.shared.activeTTY = Demo.enabled ? Demo.activeTTY : Terminals.frontSessionTTY()
         NSApp.activate(ignoringOtherApps: true)
@@ -207,6 +209,9 @@ enum CLI {
         if args.contains("--check-groups") { exit(SelfTest.checkGroups(store) ? 0 : 1) }
         if args.contains("--dump") { dump(store) }
         if args.contains("--worktree-plan") { SelfTest.printWorktreePlan(store) }
+        if let taps = ProcessInfo.processInfo.environment["CSB_TAP_TITLE"].flatMap(Int.init) {
+            for _ in 0..<taps { store.tapTitle() }
+        }
         if let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count {
             snapshot(store, to: args[index + 1], dark: args.contains("--dark"))
         }

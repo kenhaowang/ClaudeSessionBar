@@ -38,6 +38,10 @@ enum SelfTest {
             // Start a pretend drag once the chips exist, so the forced indicator really appears
             // and (without CSB_HOLD_DRAG) is then cleared by the mouse-up watcher.
             if forcedDropIndicator != nil { Store.shared.dragKind = .tab(.all) }
+            // CSB_TAP_TITLE=<n> taps the title n times through the same call the gesture makes.
+            if let taps = ProcessInfo.processInfo.environment["CSB_TAP_TITLE"].flatMap(Int.init) {
+                for _ in 0..<taps { Store.shared.tapTitle() }
+            }
             // CSB_FORCE_WORKTREE_PROPOSAL=1 shows the "create a worktree?" box on the first row.
             if ProcessInfo.processInfo.environment["CSB_FORCE_WORKTREE_PROPOSAL"] == "1",
                 let row = Store.shared.visibleRows.first, let branch = row.branch
