@@ -162,7 +162,18 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.1.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.2** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.2 (2026-11-02)
+
+- Ghostty support (1.3 or later): ＋ opens new tabs, sessions are reopened after a restart, and clicking a session jumps to its tab
+  - Ghostty 1.3.x does not expose ttys, so tabs are matched by title, then by folder; once a Ghostty release exposes ttys, they are used automatically
+  - Not yet available with Ghostty 1.3.x: the "Current Tab" marker, syncing a rename to the tab title, and closing the tab when ending a session
+- New tabs open in the terminal you used last (iTerm2 or Ghostty)
+- New settings menu (the gear at the top right):
+  - Terminal: pick the app new tabs open in
+  - Language: 繁體中文 / English (moved here from the globe button)
+- A session's "⋯" menu lists every installed editor (Cursor, VS Code, Windsurf, Zed, PyCharm, Sublime Text), not only Cursor
 
 ### v1.1.1 (2026-10-27)
 

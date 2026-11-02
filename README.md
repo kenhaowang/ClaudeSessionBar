@@ -161,7 +161,18 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.1.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.2**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.2（2026-11-02）
+
+- 支援 Ghostty（1.3 以上）：「＋」開新分頁、重開機後恢復 session、點 session 切到分頁都能用
+  - Ghostty 1.3.x 不提供 tty，改用分頁標題比對，比不到時再用資料夾比對；之後的 Ghostty 版本提供 tty 時會自動改用 tty
+  - Ghostty 1.3.x 還不支援三件事：「目前分頁」標示、改名同步到分頁標題、結束 session 時一併關閉分頁
+- 新分頁預設開在你最後使用的終端機（iTerm2 或 Ghostty）
+- 新增設定選單（標題列右上角的齒輪）：
+  - 終端機：選擇開新分頁要用的 App
+  - 語言：繁體中文／English（原本的地球圖示移到這裡）
+- session「⋯」選單會列出電腦裡裝了的所有編輯器（Cursor、VS Code、Windsurf、Zed、PyCharm、Sublime Text），不再只有 Cursor
 
 ### v1.1.1（2026-10-27）
 
