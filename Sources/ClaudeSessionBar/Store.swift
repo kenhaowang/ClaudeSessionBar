@@ -690,7 +690,7 @@ final class Store: ObservableObject {
             fallback()
             return
         }
-        Terminals.focus(tty: tty, cwd: row.cwd, title: row.title) { found in
+        Terminals.focus(tty: tty, pid: row.pid, cwd: row.cwd, title: row.title) { found in
             if !found { fallback() }
         }
     }
@@ -765,12 +765,17 @@ final class Store: ObservableObject {
     }
 
     private func flashOpenFailed(_ terminal: TerminalApp) {
-        flash(
-            terminal == .ghostty
-                ? tr("無法在 Ghostty 開新分頁（需要 Ghostty 1.3 以上，並允許控制 Ghostty）",
-                     "Couldn't open a Ghostty tab (needs Ghostty 1.3 or later, and permission to control it)")
-                : tr("無法在 iTerm2 開新分頁（請確認已允許控制 iTerm2）",
+        switch terminal {
+        case .iterm:
+            flash(tr("無法在 iTerm2 開新分頁（請確認已允許控制 iTerm2）",
                      "Couldn't open an iTerm2 tab (check that the app may control iTerm2)"))
+        case .ghostty:
+            flash(tr("無法在 Ghostty 開新分頁（需要 Ghostty 1.3 以上，並允許控制 Ghostty）",
+                     "Couldn't open a Ghostty tab (needs Ghostty 1.3 or later, and permission to control it)"))
+        case .warp:
+            flash(tr("無法在 Warp 開新分頁（無法寫入 ~/.warp/tab_configs）",
+                     "Couldn't open a Warp tab (couldn't write to ~/.warp/tab_configs)"))
+        }
     }
 
     func prepareNewSession(groupId: String?) -> (sessionId: String, command: String) {
@@ -813,7 +818,7 @@ final class Store: ObservableObject {
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.applicationBundle]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.message = tr("選擇開新分頁要用的終端機（支援 iTerm2、Ghostty）", "Choose the terminal for new tabs (iTerm2 or Ghostty)")
+        panel.message = tr("選擇開新分頁要用的終端機（支援 iTerm2、Ghostty、Warp）", "Choose the terminal for new tabs (iTerm2, Ghostty or Warp)")
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if let terminal = TerminalApp(bundleId: Bundle(url: url)?.bundleIdentifier) {
@@ -823,7 +828,7 @@ final class Store: ObservableObject {
         }
         let alert = NSAlert()
         alert.messageText = tr("不支援 \(url.deletingPathExtension().lastPathComponent)", "\(url.deletingPathExtension().lastPathComponent) isn't supported")
-        alert.informativeText = tr("目前只支援 iTerm2 和 Ghostty（1.3 以上）。", "Only iTerm2 and Ghostty (1.3 or later) are supported for now.")
+        alert.informativeText = tr("目前只支援 iTerm2、Ghostty（1.3 以上）和 Warp。", "Only iTerm2, Ghostty (1.3 or later) and Warp are supported for now.")
         alert.runModal()
     }
 

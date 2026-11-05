@@ -80,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.start()
         // Logout, restart and shutdown (including forced macOS updates) announce themselves here,
         // before iTerm quits and takes the sessions down one by one.
-        // ＋ opens tabs in whichever terminal (iTerm2 or Ghostty) the user was using last.
+        // ＋ opens tabs in whichever terminal (iTerm2, Ghostty or Warp) the user was using last.
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { note in

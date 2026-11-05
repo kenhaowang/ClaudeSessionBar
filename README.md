@@ -2,7 +2,7 @@
 
 繁體中文 | [English](README.en.md)
 
-選單列上的 Claude Code session 儀表板：列出所有開著的 session、判斷「在等你做什麼」、點一下切到對應的 iTerm2／Ghostty 分頁。
+選單列上的 Claude Code session 儀表板：列出所有開著的 session、判斷「在等你做什麼」、點一下切到對應的 iTerm2／Ghostty／Warp 分頁。
 
 > 這是個人的非官方專案，與 Anthropic 沒有關聯，也未經其認可。
 
@@ -11,7 +11,7 @@
 ## 需求
 
 - macOS 14 以上，並安裝 Xcode Command Line Tools（Swift 5.9+）
-- [iTerm2](https://iterm2.com/) 或 [Ghostty](https://ghostty.org/) 1.3 以上：session 需要跑在其中之一，才能點擊切換和開新分頁（Ghostty 的限制見下方「終端機」）
+- [iTerm2](https://iterm2.com/)、[Ghostty](https://ghostty.org/) 1.3 以上或 [Warp](https://www.warp.dev/)：session 需要跑在其中之一，才能點擊切換和開新分頁（Ghostty 和 Warp 的限制見下方「終端機」）
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) CLI（`claude`）並已登入
 - 選用：[GitHub CLI](https://cli.github.com/)（`gh`）用來顯示 PR／CI 狀態；Cursor、VS Code 等編輯器用來開啟分支
 
@@ -88,14 +88,20 @@ rm -rf ~/Applications/ClaudeSessionBar.app ~/.claude/session-dashboard
 
 ## 終端機
 
-支援 iTerm2 和 Ghostty（1.3 以上）。開新分頁預設開在你最後使用的那一個；兩個都沒開過時，用正在執行的那一個，都沒在執行就用有安裝的（iTerm2 優先）。要固定用某一個，點右上角的齒輪 →「終端機」，在跳出的視窗選 iTerm2 或 Ghostty 的 App。
+支援 iTerm2、Ghostty（1.3 以上）和 Warp。開新分頁預設開在你最後使用的那一個；都沒開過時，用正在執行的那一個，都沒在執行就用有安裝的（依 iTerm2、Ghostty、Warp 的順序）。要固定用某一個，點右上角的齒輪 →「終端機」，在跳出的視窗選要用的 App。
 
-點 session 切換分頁時，會用 tty 在兩邊找。Ghostty 1.3.x 的 AppleScript 還沒提供 tty，所以：
+點 session 切換分頁時，會用 tty 在 iTerm2 和 Ghostty 裡找。Ghostty 1.3.x 的 AppleScript 還沒提供 tty，所以：
 
-- 只有當該資料夾裡剛好只開著一個 Ghostty 分頁時，才能切到正確的分頁
+- 改用分頁標題比對，比不到時再找該資料夾裡唯一的 Ghostty 分頁
 - 「目前分頁」的標示、改名同步到分頁標題、結束 session 時一併關閉分頁，這三項在 Ghostty 1.3.x 不會作用
 
 之後版本的 Ghostty 有提供 tty 時，會自動改用 tty，上面的限制就會消失。
+
+Warp 沒有 AppleScript，只能從外部開新分頁，所以：
+
+- 「＋」開新分頁時，會先在 `~/.warp/tab_configs/` 寫一個暫時的分頁設定，再透過 `warp://` 開啟，約 10 秒後刪掉
+- 點 Warp 裡的 session 只會把 Warp 叫到前景，不會切到該分頁
+- 「目前分頁」的標示、改名同步到分頁標題、結束 session 時一併關閉分頁，這三項在 Warp 不會作用
 
 ## 重開機後恢復 session
 

@@ -1,18 +1,33 @@
 import AppKit
 
-/// The terminal apps that sessions run in and new tabs open in. Both are driven through AppleScript.
+/// The terminal apps that sessions run in and new tabs open in. iTerm2 and Ghostty are driven
+/// through AppleScript; Warp has no scripting dictionary and only takes URLs.
 enum TerminalApp: String, CaseIterable {
-    case iterm, ghostty
+    case iterm, ghostty, warp
 
-    var bundleId: String { self == .iterm ? "com.googlecode.iterm2" : "com.mitchellh.ghostty" }
-    var name: String { self == .iterm ? "iTerm2" : "Ghostty" }
+    var bundleId: String {
+        switch self {
+        case .iterm: "com.googlecode.iterm2"
+        case .ghostty: "com.mitchellh.ghostty"
+        case .warp: "dev.warp.Warp-Stable"
+        }
+    }
+
+    var name: String {
+        switch self {
+        case .iterm: "iTerm2"
+        case .ghostty: "Ghostty"
+        case .warp: "Warp"
+        }
+    }
 
     var runningApp: NSRunningApplication? {
         NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == bundleId }
     }
 
     var isRunning: Bool { runningApp != nil }
-    var isInstalled: Bool { NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) != nil }
+    var appURL: URL? { NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) }
+    var isInstalled: Bool { appURL != nil }
 
     init?(bundleId: String?) {
         guard let match = Self.allCases.first(where: { $0.bundleId == bundleId }) else { return nil }
@@ -20,7 +35,7 @@ enum TerminalApp: String, CaseIterable {
     }
 }
 
-/// Routes tab operations to iTerm2 or Ghostty. Sessions are looked up by tty in every running
+/// Routes tab operations to iTerm2, Ghostty or Warp. Sessions are looked up by tty in every running
 /// terminal; new tabs go to the terminal the user was in last.
 enum Terminals {
     private static let lastUsedKey = "lastTerminal"
@@ -59,7 +74,8 @@ enum Terminals {
         print("preferred: \(preferred.name)")
         print("editors: \(Editor.installed.map(\.name).joined(separator: ", "))")
         var ok = true
-        for terminal in TerminalApp.allCases {
+        print("host of this process: \(hostTerminal(pid: Int(getpid()))?.name ?? "none")")
+        for terminal in TerminalApp.allCases where terminal != .warp {
             guard terminal.isInstalled else {
                 print("\(terminal.name): not installed")
                 continue
@@ -92,6 +108,20 @@ enum Terminals {
             print((got == expected ? "PASS " : "FAIL ") + "Ghostty match: \(label) -> \(got ?? "none")")
             ok = ok && got == expected
         }
+        let config = Warp.tabConfig(command: #"cd '/a "b"\c' && claude"#)
+        let expectedConfig = #"""
+            name = "Claude Session Bar"
+
+            [[panes]]
+            id = "main"
+            type = "terminal"
+            commands = ["cd '/a \"b\"\\c' && claude"]
+
+            """#
+        let configPass = config == expectedConfig
+        print((configPass ? "PASS " : "FAIL ") + "Warp tab config escapes quotes and backslashes")
+        if !configPass { print(config) }
+        ok = ok && configPass
         let saved = choice
         defer { choice = saved }
         for terminal in TerminalApp.allCases {
@@ -118,7 +148,12 @@ enum Terminals {
         guard !commands.isEmpty else { return }
         let terminal = preferred
         activate(terminal) {
-            let ok = terminal == .ghostty ? Ghostty.openTabs(commands) : ITerm.openTabs(commands)
+            let ok =
+                switch terminal {
+                case .iterm: ITerm.openTabs(commands)
+                case .ghostty: Ghostty.openTabs(commands)
+                case .warp: Warp.openTabs(commands)
+                }
             Log.jump.notice("openTabs \(terminal.name, privacy: .public) \(commands.count) -> \(ok)")
             completion(ok, terminal)
         }
@@ -126,7 +161,12 @@ enum Terminals {
 
     /// Finds the session by tty (Ghostty versions without a `tty` property fall back to the tab
     /// title Claude Code sets, then to the session's directory) and brings its tab to the front.
-    static func focus(tty: String, cwd: String, title: String?, completion: @escaping (Bool) -> Void) {
+    /// Warp cannot select a tab from outside, so a session running in Warp only brings Warp forward.
+    static func focus(tty: String, pid: Int, cwd: String, title: String?, completion: @escaping (Bool) -> Void) {
+        if TerminalApp.warp.isRunning, hostTerminal(pid: pid) == .warp {
+            activate(.warp) { completion(true) }
+            return
+        }
         let running = ([preferred] + TerminalApp.allCases).filter(\.isRunning)
         if running.contains(.iterm), ITerm.contains(tty: tty) {
             activate(.iterm) { completion(ITerm.select(tty: tty)) }
@@ -141,7 +181,40 @@ enum Terminals {
     static func frontSessionTTY() -> String? {
         let front = TerminalApp(bundleId: NSWorkspace.shared.frontmostApplication?.bundleIdentifier) ?? lastUsed
         guard let front, front.isRunning else { return nil }
-        return front == .ghostty ? Ghostty.frontTTY() : ITerm.frontTTY()
+        switch front {
+        case .iterm: return ITerm.frontTTY()
+        case .ghostty: return Ghostty.frontTTY()
+        case .warp: return nil
+        }
+    }
+
+    /// The terminal whose app bundle holds `pid` or one of its ancestors (the shell, `login`, or a
+    /// helper process the terminal spawned).
+    static func hostTerminal(pid: Int) -> TerminalApp? {
+        let bundles = TerminalApp.allCases.compactMap { app in app.appURL.map { (app, $0.path + "/") } }
+        var current = pid_t(pid)
+        for _ in 0..<16 {
+            if let path = executablePath(current), let match = bundles.first(where: { path.hasPrefix($0.1) }) {
+                return match.0
+            }
+            guard let parent = parentPid(current), parent > 1 else { return nil }
+            current = parent
+        }
+        return nil
+    }
+
+    private static func executablePath(_ pid: pid_t) -> String? {
+        var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN) * 4)
+        guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return nil }
+        return String(cString: buffer)
+    }
+
+    private static func parentPid(_ pid: pid_t) -> pid_t? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
+        return info.kp_eproc.e_ppid
     }
 
     static func setName(tty: String, name: String) {
@@ -448,5 +521,60 @@ enum Ghostty {
         end tell
         return "notfound"
         """
+    }
+}
+
+/// Warp has no AppleScript dictionary. New tabs come from a Tab Config file opened through its URL
+/// scheme; the file is removed again once Warp has read it.
+enum Warp {
+    private static var configDirectory: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".warp/tab_configs")
+    }
+
+    /// Several commands open a new window first; the rest land in it as the active window.
+    static func openTabs(_ commands: [String]) -> Bool {
+        let directory = configDirectory
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        } catch {
+            Log.jump.error("Warp tab_configs: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+        let batch = UUID().uuidString.prefix(8).lowercased()
+        var files: [URL] = []
+        for (index, command) in commands.enumerated() {
+            let name = "claude-session-bar-\(batch)-\(index)"
+            let file = directory.appendingPathComponent(name + ".toml")
+            guard (try? tabConfig(command: command).write(to: file, atomically: true, encoding: .utf8)) != nil,
+                let url = URL(string: "warp://tab_config/\(name)" + (commands.count > 1 && index == 0 ? "?new_window=true" : ""))
+            else { return false }
+            files.append(file)
+            // Warp handles each URL against whichever window is active, so give the new window time to open.
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.8) {
+                let opened = NSWorkspace.shared.open(url)
+                Log.jump.notice("Warp open \(url.absoluteString, privacy: .public) -> \(opened)")
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(commands.count) * 0.8 + 10) {
+            for file in files { try? FileManager.default.removeItem(at: file) }
+        }
+        return true
+    }
+
+    /// The commands are typed into the tab's login shell, so the user's PATH and shell setup apply.
+    static func tabConfig(command: String) -> String {
+        """
+        name = "Claude Session Bar"
+
+        [[panes]]
+        id = "main"
+        type = "terminal"
+        commands = [\(tomlQuote(command))]
+
+        """
+    }
+
+    private static func tomlQuote(_ text: String) -> String {
+        "\"" + text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
 }
