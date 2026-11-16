@@ -162,7 +162,13 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.2.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.3** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.3 (2026-11-16)
+
+- New "Menu Bar Icon" option in the settings menu (gear): "Standard" or "Tinted"
+  - Tinted puts the icon and count on a pale capsule that follows the icon's colour (green, yellow, orange, red, pink), with the count in a deep shade of it, so it stays readable on both light and dark menu bars
+  - "Standard" is the default and looks the same as before
 
 ### v1.2.1 (2026-11-02)
 

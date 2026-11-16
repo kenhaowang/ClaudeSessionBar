@@ -161,7 +161,13 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.2.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.3**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.3（2026-11-16）
+
+- 設定選單（齒輪）新增「標籤列圖示」：可以選「標準」或「有底色」
+  - 有底色：圖示和數字放在一個淡色膠囊裡，底色跟著圖示變（綠、黃、橘、紅、粉），數字改用同色系的深色，深色、淺色選單列都看得清楚
+  - 預設是「標準」，跟之前一樣
 
 ### v1.2.1（2026-11-02）
 
