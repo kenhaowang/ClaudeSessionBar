@@ -60,7 +60,7 @@ enum Entry {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
-    private var icon: StatusIcon?
+    private var shown: (icon: StatusIcon, count: Int, tinted: Bool)?
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -106,6 +106,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         store.closePopover = { [weak self] in self?.popover.performClose(nil) }
         store.$rows
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateStatusButton() }
+            .store(in: &cancellables)
+        store.$statusBadge
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.updateStatusButton() }
             .store(in: &cancellables)
@@ -159,11 +163,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // CSB_FORCE_WAITING lets a self-test show any icon without real waiting sessions.
         let forced = ProcessInfo.processInfo.environment["CSB_FORCE_WAITING"].flatMap(Int.init)
         let newIcon = StatusIcon(waiting: forced ?? count)
-        if newIcon != icon {
-            icon = newIcon
-            button.image = newIcon.image
+        let tinted = Store.shared.statusBadge
+        if shown?.icon != newIcon || shown?.count != count || shown?.tinted != tinted {
+            shown = (newIcon, count, tinted)
+            // The tinted badge already holds the count; leaving the button in image-leading mode
+            // with an empty title lets AppKit lay it out differently after a switch.
+            button.title = !tinted && count > 0 ? " \(count)" : ""
+            button.imagePosition = tinted ? .imageOnly : .imageLeading
+            button.image = tinted ? newIcon.badge(count: count) : newIcon.image
         }
-        button.title = count > 0 ? " \(count)" : ""
         button.toolTip = count > 0 ? waitingText(count) : "Claude Sessions"
     }
 

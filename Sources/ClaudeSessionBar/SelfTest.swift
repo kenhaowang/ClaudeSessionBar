@@ -378,11 +378,12 @@ enum SelfTest {
         return failures == 0
     }
 
-    /// `--icon-sheet <png>`: the four menu bar icons at 4×, on a dark and a light strip.
+    /// `--icon-sheet <png>`: the menu bar badges at 4×, on a dark and a light strip.
     static func writeIconSheet(to path: String) -> Bool {
-        let icons: [StatusIcon] = [.clear, .few, .many, .overloaded, .cake]
+        let counts = [0, 3, 8, 12, 6]
+        let icons = counts.map(StatusIcon.init(waiting:))
         let scale: CGFloat = 4
-        let cell = NSSize(width: 40 * scale, height: 26 * scale)
+        let cell = NSSize(width: 56 * scale, height: 26 * scale)
         let size = NSSize(width: cell.width * CGFloat(icons.count), height: cell.height * 2)
         let image = NSImage(size: size, flipped: true) { _ in
             for (strip, background) in [NSColor(white: 0.12, alpha: 1), NSColor(white: 0.93, alpha: 1)].enumerated() {
@@ -390,7 +391,7 @@ enum SelfTest {
                     let origin = NSPoint(x: CGFloat(index) * cell.width, y: CGFloat(strip) * cell.height)
                     background.setFill()
                     NSRect(origin: origin, size: cell).fill()
-                    let picture = icon.image
+                    let picture = icon.badge(count: counts[index])
                     let drawn = NSSize(width: picture.size.width * scale, height: picture.size.height * scale)
                     picture.draw(in: NSRect(
                         x: origin.x + (cell.width - drawn.width) / 2, y: origin.y + (cell.height - drawn.height) / 2,

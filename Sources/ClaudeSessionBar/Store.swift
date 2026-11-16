@@ -37,6 +37,11 @@ final class Store: ObservableObject {
         }
     }
 
+    /// Draws the menu bar icon and count on a tinted capsule (gear menu).
+    @Published var statusBadge = UserDefaults.standard.bool(forKey: "statusBadge") {
+        didSet { UserDefaults.standard.set(statusBadge, forKey: "statusBadge") }
+    }
+
     /// CSB_ACCENT lets tests render a colour without touching the saved choice.
     @Published var accent: AccentTheme =
         AccentTheme(rawValue: ProcessInfo.processInfo.environment["CSB_ACCENT"] ?? "")
@@ -785,7 +790,8 @@ final class Store: ObservableObject {
 
     /// The ＋ button's menu: which group the new session goes into, or none, plus the folder it
     /// starts in. A native menu keeps the button's two-colour symbol (SwiftUI's Menu would not).
-    /// The gear button's menu: the terminal new tabs open in, and the interface language.
+    /// The gear button's menu: the terminal new tabs open in, the interface language, and the
+    /// menu bar icon style.
     func showSettingsMenu() {
         let menu = NSMenu()
         let terminal = Terminals.preferred.name
@@ -803,6 +809,17 @@ final class Store: ObservableObject {
         }
         languageItem.submenu = languageMenu
         menu.addItem(languageItem)
+        let styles = [(false, tr("標準", "Standard")), (true, tr("有底色", "Tinted"))]
+        let currentStyle = styles.first { $0.0 == statusBadge }?.1 ?? ""
+        let styleItem = NSMenuItem(title: tr("標籤列圖示：\(currentStyle)", "Menu Bar Icon: \(currentStyle)"), action: nil, keyEquivalent: "")
+        let styleMenu = NSMenu()
+        for (tinted, title) in styles {
+            let item = ClosureMenuItem(title: title) { [weak self] in self?.statusBadge = tinted }
+            item.state = statusBadge == tinted ? .on : .off
+            styleMenu.addItem(item)
+        }
+        styleItem.submenu = styleMenu
+        menu.addItem(styleItem)
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 

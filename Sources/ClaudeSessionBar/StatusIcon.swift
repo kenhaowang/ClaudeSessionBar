@@ -37,6 +37,43 @@ enum StatusIcon: Equatable {
         return image
     }
 
+    /// A pale wash of the icon's own colour behind it, and a deep shade of it for the count.
+    private var palette: (background: NSColor, text: NSColor) {
+        switch self {
+        case .clear: (NSColor(hex: 0xD1E7DD), NSColor(hex: 0x0A3622))
+        case .few: (NSColor(hex: 0xFFF3CD), NSColor(hex: 0x664D03))
+        case .many: (NSColor(hex: 0xFFE5D0), NSColor(hex: 0x7A3A06))
+        case .overloaded: (NSColor(hex: 0xF8D7DA), NSColor(hex: 0x58151C))
+        case .cake: (NSColor(hex: 0xF7D6E6), NSColor(hex: 0x6B1A43))
+        }
+    }
+
+    /// The icon and the waiting count (if any) on a capsule, drawn as one image so the count's
+    /// colour does not depend on the menu bar's appearance.
+    func badge(count: Int) -> NSImage {
+        let icon = image
+        let colors = palette
+        let text = NSAttributedString(
+            string: count > 0 ? String(count) : "",
+            attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold), .foregroundColor: colors.text])
+        let textSize = text.size()
+        let height: CGFloat = 20
+        let leading: CGFloat = 4
+        let trailing: CGFloat = count > 0 ? 8 : 4
+        let gap: CGFloat = count > 0 ? 2 : 0
+        let width = (leading + icon.size.width + gap + textSize.width + trailing).rounded(.up)
+        let result = NSImage(size: NSSize(width: width, height: height), flipped: false) { bounds in
+            colors.background.setFill()
+            NSBezierPath(roundedRect: bounds, xRadius: height / 2, yRadius: height / 2).fill()
+            icon.draw(in: NSRect(x: leading, y: (height - icon.size.height) / 2, width: icon.size.width, height: icon.size.height))
+            text.draw(at: NSPoint(x: leading + icon.size.width + gap, y: (height - textSize.height) / 2))
+            return true
+        }
+        result.isTemplate = false
+        result.accessibilityDescription = icon.accessibilityDescription
+        return result
+    }
+
     /// The status bar clips images taller than it is, and symbol/emoji images carry their own
     /// padding and baseline. Redraw them aspect-fit into an 18pt square so nothing is cut off.
     private static func fitted(_ source: NSImage, side: CGFloat) -> NSImage {
@@ -65,5 +102,13 @@ enum StatusIcon: Equatable {
             text.draw(at: .zero)
             return true
         }
+    }
+}
+
+extension NSColor {
+    convenience init(hex: Int) {
+        self.init(
+            srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
+            blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
     }
 }
