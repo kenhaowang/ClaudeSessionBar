@@ -258,6 +258,74 @@ enum SelfTest {
         return failures == 0
     }
 
+    /// `--check-branch`: which branch a session is credited with, from made-up transcripts.
+    static func checkBranch() -> Bool {
+        var failures = 0
+        func expect(_ ok: Bool, _ label: String) {
+            print((ok ? "PASS " : "FAIL ") + label)
+            if !ok { failures += 1 }
+        }
+        let home = "/repo", tree = "/repo/.claude/worktrees/feat-x"
+        func message(_ branch: String, _ cwd: String = home, bash: String? = nil) -> String {
+            var obj: [String: Any] = ["type": bash == nil ? "user" : "assistant", "gitBranch": branch, "cwd": cwd]
+            if let bash {
+                obj["message"] = ["content": [["type": "tool_use", "name": "Bash", "input": ["command": bash]]]]
+            }
+            let data = try! JSONSerialization.data(withJSONObject: obj)
+            return String(data: data, encoding: .utf8)!
+        }
+        func info(_ lines: [String]) -> TranscriptInfo {
+            let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("csb-branch-\(UUID().uuidString).jsonl")
+            defer { try? FileManager.default.removeItem(at: url) }
+            try? (lines.joined(separator: "\n") + "\n").write(to: url, atomically: true, encoding: .utf8)
+            return TranscriptReader().read(sessionId: "s", url: url)
+        }
+
+        let plain = info([message("develop"), message("develop")])
+        expect(plain.branch == "develop" && plain.branchDirectory == home, "no switching: the checkout's branch")
+
+        let worktree = info([
+            message("develop"),
+            message("develop", bash: "git worktree add -b feat/x .claude/worktrees/feat-x origin/develop"),
+            message("HEAD", tree), message("feat/x", tree), message("develop"), message("develop"),
+        ])
+        expect(worktree.gitBranch == "develop", "the last message alone names the shared checkout's branch")
+        expect(worktree.branch == "feat/x" && worktree.branchDirectory == tree, "back in the shared checkout it keeps the worktree branch")
+
+        let createdOnly = info([message("develop", bash: "cd /repo && git worktree add -B fix/y ../y && echo ok"), message("develop")])
+        expect(createdOnly.branch == "fix/y" && createdOnly.branchDirectory == home, "worktree add -B without cd-ing into it")
+
+        let subdirectory = info([message("develop"), message("develop", "/repo/app"), message("develop")])
+        expect(subdirectory.branch == "develop", "a subdirectory on the same branch is not a worktree")
+
+        let ownSwitch = info([
+            message("develop"), message("hotfix/z"), message("hotfix/z", bash: "git switch -c hotfix/z origin/main"),
+            message("hotfix/z"), message("release"),
+        ])
+        expect(ownSwitch.branch == "hotfix/z", "its own git switch counts, a later switch by someone else does not")
+
+        let othersSwitch = info([message("feat/mine"), message("feat/mine"), message("release"), message("release")])
+        expect(othersSwitch.branch == "release", "with nothing of its own it falls back to the last message")
+
+        let unrelatedCommand = info([
+            message("develop", bash: "git checkout -- a.py"), message("develop"), message("develop"),
+            message("develop"), message("develop"), message("main"),
+        ])
+        expect(unrelatedCommand.branches.own == nil, "a checkout long before the change is not credited")
+
+        expect(BranchTracker.createdWorktreeBranch("git worktree add ../p feature") == nil, "worktree add without -b names no new branch")
+        expect(BranchTracker.createdWorktreeBranch("git worktree add ../p && git branch -b x") == nil, "-b after && belongs to another command")
+        expect(BranchTracker.createdWorktreeBranch("git -C /repo worktree add -b 'feat/q' ../q") == "feat/q", "quoted name after git -C")
+        expect(BranchTracker.createdWorktreeBranch("cd /x && python3 - <<'EOF'\nrun('git worktree add -b feat/x p')\nEOF") == nil,
+            "a git command inside a heredoc is not run")
+        expect(BranchTracker.createdWorktreeBranch("grep -o 'git worktree add -b feat/x' log") == nil, "a quoted mention is not run")
+        expect(BranchTracker.switchesBranch("git fetch origin && git switch -c a origin/a"), "git switch after &&")
+        expect(!BranchTracker.switchesBranch("grep 'git checkout' notes.md"), "a grep for git checkout is not a switch")
+
+        print(failures == 0 ? "ALL PASS" : "\(failures) FAILED")
+        return failures == 0
+    }
+
     /// `--check-pr`: PR link extraction, remote parsing and CI aggregation on fixed inputs.
     static func checkPR() -> Bool {
         var failures = 0

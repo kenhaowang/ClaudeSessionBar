@@ -109,7 +109,7 @@ A session's PR is the last PR link in its conversation that belongs to the same 
 
 A session's "⋯" menu lists the editors installed on your Mac, e.g. "Open <branch> in Cursor" and "Open <branch> in VS Code" (Cursor, VS Code, Windsurf, Zed, PyCharm and Sublime Text are recognised). If the branch is already checked out in a worktree (including the main checkout) the editor opens it directly; otherwise the row asks whether to create `.claude/worktrees/<branch, with / replaced by ->` and only runs `git worktree add` after you confirm.
 
-Note: the branch is whatever was checked out when the session's last message was written; when several sessions share one checkout, another session may have switched it.
+The branch is the one the session itself created or moved to: made with `git worktree add -b`, worked on inside a worktree, or switched to by its own `git checkout`/`git switch`. Only when there is none does it fall back to whatever was checked out when the session's last message was written (when several sessions share one checkout, another session may have switched it).
 
 ## Groups
 
@@ -149,6 +149,10 @@ mkdir -p /tmp/csb-restore && CSB_DASHBOARD_DIR=/tmp/csb-restore .build/release/C
 
 # Check worktree creation (runs in a throwaway test repo, deleted afterwards)
 .build/release/ClaudeSessionBar --check-worktree
+
+# Check how a session's branch is worked out; --branch-of prints it for the given transcripts
+.build/release/ClaudeSessionBar --check-branch
+.build/release/ClaudeSessionBar --branch-of ~/.claude/projects/<project>/<sessionId>.jsonl
 
 # Regenerate the README screenshot with made-up sessions (a real screen capture; the terminal needs
 # Screen Recording permission, otherwise the app draws its own windows instead)

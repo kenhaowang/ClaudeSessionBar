@@ -273,7 +273,8 @@ final class Store: ObservableObject {
             jobId: agent.id,
             tty: raw.tty,
             cwd: transcript?.cwd ?? agent.cwd,
-            branch: transcript?.gitBranch,
+            branch: transcript?.branch,
+            branchDirectory: transcript?.branchDirectory ?? agent.cwd,
             displayName: currentName(raw),
             title: transcript?.aiTitle,
             hasCustomName: names[sid] != nil,
@@ -303,7 +304,7 @@ final class Store: ObservableObject {
             guard raw.transcript?.lastMessageUUID != nil else { return nil }
             return RestorableSession(
                 sessionId: raw.agent.sessionId, cwd: raw.agent.cwd, name: currentName(raw),
-                branch: raw.transcript?.gitBranch, lastSpokeAt: lastSpoke(raw)?.timeIntervalSince1970)
+                branch: raw.transcript?.branch, lastSpokeAt: lastSpoke(raw)?.timeIntervalSince1970)
         }
     }
 
@@ -426,7 +427,7 @@ final class Store: ObservableObject {
         if !turnEnded, let last = transcript.lastMessageAt, now.timeIntervalSince(last) < 2 { return nil }
         if autoState(raw, summary: nil).isLive { return nil }
         let prompt = Summarizer.prompt(
-            name: currentName(raw), cwd: transcript.cwd ?? raw.agent.cwd, branch: transcript.gitBranch,
+            name: currentName(raw), cwd: transcript.cwd ?? raw.agent.cwd, branch: transcript.branch,
             tail: transcript.tail, language: language)
         return SummaryJob(sessionId: sid, uuid: uuid, prompt: prompt, language: language)
     }
@@ -719,7 +720,8 @@ final class Store: ObservableObject {
             flash(tr("這個 session 沒有分支資訊", "This session has no branch"))
             return
         }
-        let directory = row.cwd
+        // The worktree the branch was seen in may have been removed since.
+        let directory = FileManager.default.fileExists(atPath: row.branchDirectory) ? row.branchDirectory : row.cwd
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let entries = Worktree.list(repoDirectory: directory)
             DispatchQueue.main.async {

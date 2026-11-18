@@ -208,14 +208,21 @@ struct HookState: Decodable {
 struct TranscriptInfo {
     var aiTitle: String?
     var lastPrompt: String?
+    /// Branch of the last message: whatever the shell's directory had checked out at that moment.
     var gitBranch: String?
     var cwd: String?
+    var branches = BranchTracker()
     var lastUserAt: Date?
     var lastMessageAt: Date?
     var lastMessageUUID: String?
     var tail: [String] = []
     /// Distinct PRs linked in the conversation, most recently mentioned last.
     var prMentions: [PRRef] = []
+
+    /// The branch the session is working on, preferring one it switched to or created itself.
+    var branch: String? { branches.own?.branch ?? gitBranch }
+    /// Where `branch` was seen, to find its repository (and worktree) from.
+    var branchDirectory: String? { branches.own?.directory ?? cwd }
 
     mutating func pushTail(_ text: String) {
         tail.append(String(text.prefix(1500)))
@@ -287,6 +294,7 @@ struct SessionRow: Identifiable, Equatable {
     let tty: String?
     let cwd: String
     let branch: String?
+    let branchDirectory: String
     let displayName: String
     /// Claude Code's own title for the session, which it also puts in the terminal tab title.
     let title: String?

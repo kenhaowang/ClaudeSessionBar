@@ -109,7 +109,7 @@ session 對話裡最後出現、且屬於同一個 repo（看 git origin）的 P
 
 session 的「⋯」選單會列出電腦裡裝了的編輯器，例如「在 Cursor 開啟 <分支>」、「在 VS Code 開啟 <分支>」（目前認得 Cursor、VS Code、Windsurf、Zed、PyCharm、Sublime Text）。分支已經在某個 worktree（含主目錄）就直接開；沒有的話會在該列詢問是否建立 `.claude/worktrees/<分支，/ 換成 ->`，確認後才執行 `git worktree add`。
 
-注意：分支取自 session 最後一則訊息當下 checkout 所在的分支；多個 session 共用同一份 checkout 時，可能是別的 session 切過去的分支。
+分支以 session 自己開或切過去的為準：用 `git worktree add -b` 建的、在 worktree 裡工作時的分支，或它自己下 `git checkout`／`git switch` 切過去的分支；都沒有的話才取最後一則訊息當下 checkout 所在的分支（多個 session 共用同一份 checkout 時，可能是別的 session 切過去的）。
 
 ## 分組
 
@@ -149,6 +149,10 @@ mkdir -p /tmp/csb-restore && CSB_DASHBOARD_DIR=/tmp/csb-restore .build/release/C
 
 # worktree 建立邏輯檢查（在暫存的測試 repo 跑，跑完刪除）
 .build/release/ClaudeSessionBar --check-worktree
+
+# session 分支判斷檢查；--branch-of 印出指定對話紀錄算出的分支
+.build/release/ClaudeSessionBar --check-branch
+.build/release/ClaudeSessionBar --branch-of ~/.claude/projects/<專案>/<sessionId>.jsonl
 
 # 用虛構的 session 重新產生 README 截圖（真的螢幕截圖，終端機需有「螢幕錄製」權限；沒有的話改用 App 自己畫的圖）
 CSB_DEMO=1 CSB_LANG=zh CSB_DASHBOARD_DIR=/tmp/csb-demo \

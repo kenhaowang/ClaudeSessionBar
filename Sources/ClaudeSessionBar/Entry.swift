@@ -32,6 +32,14 @@ enum Entry {
             exit(ok ? 0 : 1)
         }
         if args.contains("--check-worktree") { exit(SelfTest.checkWorktree() ? 0 : 1) }
+        if let index = args.firstIndex(of: "--branch-of") {
+            for path in args[(index + 1)...] {
+                let info = TranscriptReader().read(sessionId: path, url: URL(fileURLWithPath: path))
+                print("\(URL(fileURLWithPath: path).lastPathComponent) | last: \(info.gitBranch ?? "-") | own: \(info.branch ?? "-") @ \(info.branchDirectory ?? "-")")
+            }
+            exit(0)
+        }
+        if args.contains("--check-branch") { exit(SelfTest.checkBranch() ? 0 : 1) }
         if args.contains("--check-pr") { exit(SelfTest.checkPR() ? 0 : 1) }
         if args.contains("--check-terminals") { exit(Terminals.check() ? 0 : 1) }
         if args.contains("--check-palette") { exit(PaletteCheck.run() ? 0 : 1) }

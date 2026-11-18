@@ -59,10 +59,12 @@ final class TranscriptReader {
             if let prompt = obj["lastPrompt"] as? String { info.lastPrompt = prompt }
         case "user", "assistant":
             if obj["isSidechain"] as? Bool == true { return }
-            if let branch = obj["gitBranch"] as? String, !branch.isEmpty, branch != "HEAD" {
-                info.gitBranch = branch
-            }
-            if let cwd = obj["cwd"] as? String { info.cwd = cwd }
+            let cwd = obj["cwd"] as? String
+            let branch = (obj["gitBranch"] as? String).flatMap { $0.isEmpty || $0 == "HEAD" ? nil : $0 }
+            if let branch { info.gitBranch = branch }
+            if let cwd { info.cwd = cwd }
+            info.branches.noteMessage(branch: branch, cwd: cwd)
+            if type == "assistant" { Self.bashCommands(in: obj).forEach { info.branches.noteCommand($0) } }
             if obj["isMeta"] as? Bool == true { return }
             // Covers user prompts, assistant text and tool output (e.g. `gh pr create` printing the URL).
             if line.range(of: Self.pullMarker) != nil, let text = String(data: line, encoding: .utf8) {
@@ -83,6 +85,14 @@ final class TranscriptReader {
             }
         default:
             break
+        }
+    }
+
+    private static func bashCommands(in obj: [String: Any]) -> [String] {
+        guard let blocks = (obj["message"] as? [String: Any])?["content"] as? [[String: Any]] else { return [] }
+        return blocks.compactMap { block in
+            guard block["type"] as? String == "tool_use", block["name"] as? String == "Bash" else { return nil }
+            return (block["input"] as? [String: Any])?["command"] as? String
         }
     }
 
@@ -108,5 +118,104 @@ final class TranscriptReader {
             let close = text.range(of: "</\(tag)>", range: open.upperBound..<text.endIndex)
         else { return nil }
         return String(text[open.upperBound..<close.lowerBound])
+    }
+}
+
+/// Works out which branch a session is on. A message's `gitBranch` is whatever the shell's
+/// directory has checked out at that moment, so once the shell falls back from a worktree to the
+/// shared checkout, or another session switches that checkout, it names somebody else's branch.
+/// A branch counts as the session's own when it created it with `git worktree add -b`, saw it in
+/// another directory (a worktree), or its own `git checkout`/`git switch` changed the checkout.
+struct BranchTracker {
+    private(set) var own: (branch: String, directory: String)?
+    private var home: String?
+    private var homeBranch: String?
+    private var messages = 0
+    private var switchedAt: Int?
+    private var homeChangedAt: Int?
+
+    /// The transcript writes a message's `gitBranch` asynchronously, so the checkout can show up a
+    /// message before or after the command that caused it.
+    private static let switchWindow = 3
+
+    mutating func noteMessage(branch: String?, cwd: String?) {
+        messages += 1
+        guard let cwd else { return }
+        if home == nil { home = cwd }
+        guard let branch else { return }
+        if cwd != home {
+            if branch != homeBranch { own = (branch, cwd) }
+            return
+        }
+        if let homeBranch, branch != homeBranch {
+            homeChangedAt = messages
+            if let switchedAt, messages - switchedAt <= Self.switchWindow {
+                own = (branch, cwd)
+                self.switchedAt = nil
+                homeChangedAt = nil
+            }
+        }
+        homeBranch = branch
+    }
+
+    mutating func noteCommand(_ command: String) {
+        if let created = Self.createdWorktreeBranch(command) {
+            if let home { own = (created, home) }
+            return
+        }
+        guard Self.switchesBranch(command) else { return }
+        if let homeChangedAt, messages - homeChangedAt <= Self.switchWindow, let home, let homeBranch {
+            own = (homeBranch, home)
+            self.homeChangedAt = nil
+        } else {
+            switchedAt = messages
+        }
+    }
+
+    /// The branch named by `-b`/`-B` in a `git worktree add` command.
+    static func createdWorktreeBranch(_ command: String) -> String? {
+        for args in gitInvocations(command) where args.starts(with: ["worktree", "add"]) {
+            guard let flag = args.firstIndex(where: { $0 == "-b" || $0 == "-B" }), flag + 1 < args.count else { continue }
+            let name = args[flag + 1].trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            if !name.isEmpty { return name }
+        }
+        return nil
+    }
+
+    static func switchesBranch(_ command: String) -> Bool {
+        gitInvocations(command).contains { $0.first == "checkout" || $0.first == "switch" }
+    }
+
+    /// Arguments after `git` (and its global options) for each simple command that starts with
+    /// `git`. Text that only mentions git, e.g. in a heredoc, a quoted string or a grep pattern,
+    /// is not a git invocation.
+    static func gitInvocations(_ command: String) -> [[String]] {
+        let script = command.components(separatedBy: "<<").first ?? command
+        var invocations: [[String]] = []
+        for line in script.split(whereSeparator: \.isNewline) {
+            var segment: [String] = []
+            func flush() {
+                if segment.first == "git" {
+                    var index = 1
+                    while index < segment.count, segment[index].hasPrefix("-") {
+                        index += segment[index] == "-C" || segment[index] == "-c" ? 2 : 1
+                    }
+                    if index < segment.count { invocations.append(Array(segment[index...])) }
+                }
+                segment = []
+            }
+            for token in line.split(whereSeparator: \.isWhitespace).map(String.init) {
+                if ["&&", "||", ";", "|"].contains(token) {
+                    flush()
+                } else if token.hasSuffix(";") {
+                    segment.append(String(token.dropLast()))
+                    flush()
+                } else {
+                    segment.append(token)
+                }
+            }
+            flush()
+        }
+        return invocations
     }
 }
