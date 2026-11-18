@@ -219,10 +219,11 @@ struct TranscriptInfo {
     /// Distinct PRs linked in the conversation, most recently mentioned last.
     var prMentions: [PRRef] = []
 
-    /// The branch the session is working on, preferring one it switched to or created itself.
-    var branch: String? { branches.own?.branch ?? gitBranch }
+    /// The branch the session is working on: one it switched to or created itself, else one the
+    /// conversation named. Nil when it only ever sat on whatever was checked out.
+    var branch: String? { (branches.own ?? branches.mentioned)?.branch }
     /// Where `branch` was seen, to find its repository (and worktree) from.
-    var branchDirectory: String? { branches.own?.directory ?? cwd }
+    var branchDirectory: String? { (branches.own ?? branches.mentioned)?.directory ?? cwd }
 
     mutating func pushTail(_ text: String) {
         tail.append(String(text.prefix(1500)))

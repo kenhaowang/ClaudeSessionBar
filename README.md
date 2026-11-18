@@ -109,7 +109,7 @@ session 對話裡最後出現、且屬於同一個 repo（看 git origin）的 P
 
 session 的「⋯」選單會列出電腦裡裝了的編輯器，例如「在 Cursor 開啟 <分支>」、「在 VS Code 開啟 <分支>」（目前認得 Cursor、VS Code、Windsurf、Zed、PyCharm、Sublime Text）。分支已經在某個 worktree（含主目錄）就直接開；沒有的話會在該列詢問是否建立 `.claude/worktrees/<分支，/ 換成 ->`，確認後才執行 `git worktree add`。
 
-分支以 session 自己開或切過去的為準：用 `git worktree add -b` 建的、在 worktree 裡工作時的分支，或它自己下 `git checkout`／`git switch` 切過去的分支；都沒有的話才取最後一則訊息當下 checkout 所在的分支（多個 session 共用同一份 checkout 時，可能是別的 session 切過去的）。
+分支以 session 自己開或切過去的為準：用 `git worktree add -b` 建的、在 worktree 裡工作時的分支，或它自己下 `git checkout`／`git switch` 切過去的分支；都沒有的話，取你在訊息裡寫出完整名稱、且這個 session 曾 checkout 過的分支（Claude 回覆裡提到的不算）。兩者都沒有就不顯示分支、也不列「在編輯器開啟」，不會拿當下 checkout 的分支充數。
 
 ## 分組
 

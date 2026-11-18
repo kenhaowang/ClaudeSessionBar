@@ -266,10 +266,12 @@ enum SelfTest {
             if !ok { failures += 1 }
         }
         let home = "/repo", tree = "/repo/.claude/worktrees/feat-x"
-        func message(_ branch: String, _ cwd: String = home, bash: String? = nil) -> String {
+        func message(_ branch: String, _ cwd: String = home, bash: String? = nil, says: String? = nil) -> String {
             var obj: [String: Any] = ["type": bash == nil ? "user" : "assistant", "gitBranch": branch, "cwd": cwd]
             if let bash {
                 obj["message"] = ["content": [["type": "tool_use", "name": "Bash", "input": ["command": bash]]]]
+            } else if let says {
+                obj["message"] = ["role": "user", "content": says]
             }
             let data = try! JSONSerialization.data(withJSONObject: obj)
             return String(data: data, encoding: .utf8)!
@@ -281,8 +283,20 @@ enum SelfTest {
             return TranscriptReader().read(sessionId: "s", url: url)
         }
 
-        let plain = info([message("develop"), message("develop")])
-        expect(plain.branch == "develop" && plain.branchDirectory == home, "no switching: the checkout's branch")
+        let plain = info([message("develop", says: "fix the report"), message("develop")])
+        expect(plain.branch == nil && plain.branchDirectory == home, "no switching and no mention: no branch")
+
+        let named = info([message("feat/a", says: "review feat/a, then compare with feat/a-2."), message("feat/a")])
+        expect(named.branch == "feat/a" && named.branchDirectory == home, "a checked-out branch named in the conversation")
+
+        let namedEarlier = info([message("feat/a", says: "work on feat/a"), message("develop"), message("develop")])
+        expect(namedEarlier.branch == "feat/a", "a named branch stays after someone else switches the checkout")
+
+        let partial = info([message("feat/a", says: "see feat/a-2 and feat/a.py"), message("feat/a")])
+        expect(partial.branch == nil, "a longer name or a file name is not a mention")
+
+        let unseen = info([message("develop", says: "feat/never-checked-out please")])
+        expect(unseen.branch == nil, "a name never checked out is not credited")
 
         let worktree = info([
             message("develop"),
@@ -296,7 +310,7 @@ enum SelfTest {
         expect(createdOnly.branch == "fix/y" && createdOnly.branchDirectory == home, "worktree add -B without cd-ing into it")
 
         let subdirectory = info([message("develop"), message("develop", "/repo/app"), message("develop")])
-        expect(subdirectory.branch == "develop", "a subdirectory on the same branch is not a worktree")
+        expect(subdirectory.branch == nil, "a subdirectory on the same branch is not a worktree")
 
         let ownSwitch = info([
             message("develop"), message("hotfix/z"), message("hotfix/z", bash: "git switch -c hotfix/z origin/main"),
@@ -305,7 +319,7 @@ enum SelfTest {
         expect(ownSwitch.branch == "hotfix/z", "its own git switch counts, a later switch by someone else does not")
 
         let othersSwitch = info([message("feat/mine"), message("feat/mine"), message("release"), message("release")])
-        expect(othersSwitch.branch == "release", "with nothing of its own it falls back to the last message")
+        expect(othersSwitch.branch == nil, "with nothing of its own or named it shows no branch")
 
         let unrelatedCommand = info([
             message("develop", bash: "git checkout -- a.py"), message("develop"), message("develop"),

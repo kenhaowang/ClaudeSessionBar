@@ -93,6 +93,8 @@ enum Demo {
             transcript.aiTitle = text(entry.name)
             transcript.gitBranch = entry.branch
             transcript.cwd = cwd
+            transcript.branches.noteMessage(branch: entry.branch, cwd: cwd)
+            transcript.branches.notePrompt(entry.branch)
             transcript.lastUserAt = spoke
             transcript.lastMessageAt = spoke.addingTimeInterval(30)
             transcript.lastMessageUUID = "demo-\(index)"

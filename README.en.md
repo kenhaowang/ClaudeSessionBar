@@ -109,7 +109,7 @@ A session's PR is the last PR link in its conversation that belongs to the same 
 
 A session's "⋯" menu lists the editors installed on your Mac, e.g. "Open <branch> in Cursor" and "Open <branch> in VS Code" (Cursor, VS Code, Windsurf, Zed, PyCharm and Sublime Text are recognised). If the branch is already checked out in a worktree (including the main checkout) the editor opens it directly; otherwise the row asks whether to create `.claude/worktrees/<branch, with / replaced by ->` and only runs `git worktree add` after you confirm.
 
-The branch is the one the session itself created or moved to: made with `git worktree add -b`, worked on inside a worktree, or switched to by its own `git checkout`/`git switch`. Only when there is none does it fall back to whatever was checked out when the session's last message was written (when several sessions share one checkout, another session may have switched it).
+The branch is the one the session itself created or moved to: made with `git worktree add -b`, worked on inside a worktree, or switched to by its own `git checkout`/`git switch`. Failing that, it is a branch you named in full in one of your messages and the session had checked out (names in Claude's replies do not count). With neither, no branch is shown and there is no "Open in editor" item: whatever happens to be checked out is never used as a stand-in.
 
 ## Groups
 

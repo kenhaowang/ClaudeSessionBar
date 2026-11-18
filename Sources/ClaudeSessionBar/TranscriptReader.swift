@@ -80,6 +80,7 @@ final class TranscriptReader {
                 guard let prompt = Self.userPrompt(text) else { return }
                 if let timestamp { info.lastUserAt = timestamp }
                 info.pushTail("[user] " + prompt)
+                info.branches.notePrompt(prompt)
             } else {
                 info.pushTail("[assistant] " + text)
             }
@@ -126,8 +127,13 @@ final class TranscriptReader {
 /// shared checkout, or another session switches that checkout, it names somebody else's branch.
 /// A branch counts as the session's own when it created it with `git worktree add -b`, saw it in
 /// another directory (a worktree), or its own `git checkout`/`git switch` changed the checkout.
+/// Failing that, a checked-out branch the user names in a prompt still counts (Claude's own replies
+/// name base branches like "develop" too often to count); a branch that merely happens to be
+/// checked out does not.
 struct BranchTracker {
     private(set) var own: (branch: String, directory: String)?
+    private(set) var mentioned: (branch: String, directory: String)?
+    private var seen: [String: String] = [:]
     private var home: String?
     private var homeBranch: String?
     private var messages = 0
@@ -143,6 +149,7 @@ struct BranchTracker {
         guard let cwd else { return }
         if home == nil { home = cwd }
         guard let branch else { return }
+        seen[branch] = cwd
         if cwd != home {
             if branch != homeBranch { own = (branch, cwd) }
             return
@@ -156,6 +163,35 @@ struct BranchTracker {
             }
         }
         homeBranch = branch
+    }
+
+    /// Credits a branch seen checked out that the user's prompt names as a whole word.
+    mutating func notePrompt(_ text: String) {
+        let named = seen.filter { Self.names($0.key, in: text) }
+        guard !named.isEmpty else { return }
+        if let current = homeBranch, let directory = named[current] {
+            mentioned = (current, directory)
+        } else if let longest = named.max(by: { $0.key.count < $1.key.count }) {
+            mentioned = (longest.key, longest.value)
+        }
+    }
+
+    static func names(_ branch: String, in text: String) -> Bool {
+        let nameCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._/-"))
+        func isNameCharacter(_ index: String.Index) -> Bool {
+            let c = text[index]
+            return c.isASCII && c.unicodeScalars.allSatisfy { nameCharacters.contains($0) }
+        }
+        var searchRange = text.startIndex..<text.endIndex
+        while let found = text.range(of: branch, range: searchRange) {
+            let startsWord = found.lowerBound == text.startIndex || !isNameCharacter(text.index(before: found.lowerBound))
+            var end = found.upperBound
+            // Sentence punctuation right after the name ("… on feat/x.") does not extend it.
+            while end < text.endIndex, ".-/".contains(text[end]) { end = text.index(after: end) }
+            if startsWord && (end == text.endIndex || !isNameCharacter(end)) { return true }
+            searchRange = found.upperBound..<text.endIndex
+        }
+        return false
     }
 
     mutating func noteCommand(_ command: String) {
