@@ -166,7 +166,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.3** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.3.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.3.1 (2026-11-18)
+
+- Fixed the branch shown for a session (and opened by "Open in editor") often being the main checkout's branch: it now follows the branch the session itself created with `git worktree add -b`, worked on in a worktree, or switched to with its own `git checkout`/`git switch`
 
 ### v1.3 (2026-11-16)
 

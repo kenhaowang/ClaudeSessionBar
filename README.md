@@ -165,7 +165,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.3**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.3.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.3.1（2026-11-18）
+
+- 修正 session 顯示的分支（以及「在編輯器開啟」開到的分支）常常是主目錄的分支：現在以 session 自己用 `git worktree add -b` 建立、在 worktree 裡工作，或自己 `git checkout`／`git switch` 切過去的分支為準
 
 ### v1.3（2026-11-16）
 
