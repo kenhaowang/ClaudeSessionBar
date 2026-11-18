@@ -165,7 +165,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.3.1**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.3.2**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.3.2（2026-11-18）
+
+- session 沒有自己開或切過分支、你也沒在訊息裡提到分支時，不再拿當下 checkout 的分支當預設，改成不顯示分支（也不列「在編輯器開啟」）
 
 ### v1.3.1（2026-11-18）
 

@@ -166,7 +166,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.3.1** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.3.2** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.3.2 (2026-11-18)
+
+- A session that neither created nor switched to a branch, and whose branch you never named in a message, no longer shows whatever happens to be checked out: it shows no branch (and no "Open in editor" item)
 
 ### v1.3.1 (2026-11-18)
 
