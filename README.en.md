@@ -166,7 +166,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## Version
 
-Current version: **v1.3.2** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+Current version: **v1.3.3** ([all releases](https://github.com/kenhaowang/ClaudeSessionBar/releases))
+
+### v1.3.3 (2026-11-27)
+
+- A session working in a worktree it `cd`'d into now shows that worktree's branch, read from the worktree itself: it no longer shows "-" and loses "Open in editor"
 
 ### v1.3.2 (2026-11-18)
 

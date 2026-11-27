@@ -165,7 +165,11 @@ CSB_DASHBOARD_DIR=/tmp/csb-copy .build/release/ClaudeSessionBar --check-groups
 
 ## 版本
 
-目前版本：**v1.3.2**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+目前版本：**v1.3.3**（[所有版本](https://github.com/kenhaowang/ClaudeSessionBar/releases)）
+
+### v1.3.3（2026-11-27）
+
+- session 用 `cd` 進到 worktree 工作時，改從 worktree 本身讀出分支：修正分支欄顯示「-」、也沒有「在編輯器開啟」的問題
 
 ### v1.3.2（2026-11-18）
 
