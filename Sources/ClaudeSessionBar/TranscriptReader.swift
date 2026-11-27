@@ -148,6 +148,13 @@ struct BranchTracker {
         messages += 1
         guard let cwd else { return }
         if home == nil { home = cwd }
+        // Claude Code keeps writing the branch of the directory the session started in, even after
+        // the shell moves into a worktree, so a worktree's own branch is read from the worktree.
+        if cwd != home, let worktree = worktreeBranch(containing: cwd) {
+            seen[worktree.branch] = worktree.root
+            own = (worktree.branch, worktree.root)
+            return
+        }
         guard let branch else { return }
         seen[branch] = cwd
         if cwd != home {
@@ -163,6 +170,42 @@ struct BranchTracker {
             }
         }
         homeBranch = branch
+    }
+
+    private var worktreeBranches: [String: (branch: String, root: String)?] = [:]
+
+    /// The branch checked out in the linked git worktree holding `directory`, read from its `.git`
+    /// file and HEAD. Nil inside a main checkout (`.git` is a directory), on a detached HEAD, or once
+    /// the worktree is gone.
+    private mutating func worktreeBranch(containing directory: String) -> (branch: String, root: String)? {
+        if let cached = worktreeBranches[directory] { return cached }
+        let found = Self.readWorktreeBranch(containing: directory)
+        worktreeBranches[directory] = found
+        return found
+    }
+
+    static func readWorktreeBranch(containing directory: String) -> (branch: String, root: String)? {
+        let files = FileManager.default
+        var root = URL(fileURLWithPath: directory).standardizedFileURL
+        while true {
+            let dotGit = root.appendingPathComponent(".git")
+            var isDirectory: ObjCBool = false
+            if files.fileExists(atPath: dotGit.path, isDirectory: &isDirectory) {
+                guard !isDirectory.boolValue,
+                      let pointer = try? String(contentsOf: dotGit, encoding: .utf8),
+                      let line = pointer.split(whereSeparator: \.isNewline).first,
+                      line.hasPrefix("gitdir:") else { return nil }
+                let gitDir = line.dropFirst("gitdir:".count).trimmingCharacters(in: .whitespaces)
+                let gitDirURL = gitDir.hasPrefix("/") ? URL(fileURLWithPath: gitDir) : root.appendingPathComponent(gitDir)
+                guard let head = try? String(contentsOf: gitDirURL.appendingPathComponent("HEAD"), encoding: .utf8),
+                      head.hasPrefix("ref: refs/heads/") else { return nil }
+                let branch = head.dropFirst("ref: refs/heads/".count).trimmingCharacters(in: .whitespacesAndNewlines)
+                return branch.isEmpty ? nil : (branch, root.path)
+            }
+            let parent = root.deletingLastPathComponent()
+            if parent.path == root.path { return nil }
+            root = parent
+        }
     }
 
     /// Credits a branch seen checked out that the user's prompt names as a whole word.

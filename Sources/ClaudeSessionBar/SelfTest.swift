@@ -321,6 +321,24 @@ enum SelfTest {
         let othersSwitch = info([message("feat/mine"), message("feat/mine"), message("release"), message("release")])
         expect(othersSwitch.branch == nil, "with nothing of its own or named it shows no branch")
 
+        // Claude Code records the starting directory's branch even inside a worktree: read the worktree's HEAD.
+        let disk = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("csb-worktree-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: disk) }
+        let repo = disk.appendingPathComponent("repo"), linked = repo.appendingPathComponent(".claude/worktrees/w")
+        let linkedGitDir = repo.appendingPathComponent(".git/worktrees/w")
+        try? FileManager.default.createDirectory(at: linkedGitDir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: linked.appendingPathComponent("app"), withIntermediateDirectories: true)
+        try? "gitdir: \(linkedGitDir.path)\n".write(to: linked.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+        try? "ref: refs/heads/feat/w\n".write(to: linkedGitDir.appendingPathComponent("HEAD"), atomically: true, encoding: .utf8)
+        let recordedHome = info([
+            message("develop", repo.path), message("develop", linked.path), message("develop", linked.appendingPathComponent("app").path),
+            message("develop", repo.path),
+        ])
+        expect(recordedHome.branch == "feat/w" && recordedHome.branchDirectory == linked.path, "a worktree's own HEAD, not the branch recorded for it")
+        expect(BranchTracker.readWorktreeBranch(containing: repo.path) == nil, "the main checkout is not a linked worktree")
+        try? "0123456789abcdef0123456789abcdef01234567\n".write(to: linkedGitDir.appendingPathComponent("HEAD"), atomically: true, encoding: .utf8)
+        expect(BranchTracker.readWorktreeBranch(containing: linked.path) == nil, "a detached worktree names no branch")
+
         let unrelatedCommand = info([
             message("develop", bash: "git checkout -- a.py"), message("develop"), message("develop"),
             message("develop"), message("develop"), message("main"),
